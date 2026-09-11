@@ -19,7 +19,7 @@ individually committable.
 
 ## Tasks
 
-- [ ] 1. Scaffold monorepo, tooling, and shared types
+- [x] 1. Scaffold monorepo, tooling, and shared types
   - [x] 1.1 Create root and `api/` project scaffolding and tooling
     - Create the monorepo layout (`api/`, `web/`, root), root `.gitignore`, root
       `package.json` with workspaces (or npm/pnpm workspace config)
@@ -30,7 +30,7 @@ individually committable.
     - _Traceability: enables Req 11 (lint+test scripts), Req 10 (build), foundation for all
       services. Design: Technology Stack and Rationale, Architecture (monorepo)_
 
-  - [~] 1.2 Define shared Control-iD payload/types module
+  - [x] 1.2 Define shared Control-iD payload/types module
     - Create a `types`/`shared` module in `api/` with TypeScript types for the grounded
       payload shapes: `MonitorConfig`, `UserRecord`/`AccessLogRecord`, session token,
       `PushOutcome`, `InterceptionRecord`, and the `.fcgi` request/response shapes and the
@@ -39,15 +39,15 @@ individually committable.
     - _Traceability: Req 1.1, 1.2, 5.3, 6.1–6.3; Design: Components and Interfaces, Push/
       Webhook Payload Catalog_
 
-- [ ] 2. Database schema and connection layer
-  - [~] 2.1 Implement Drizzle schema and DB connection factory
+- [x] 2. Database schema and connection layer
+  - [x] 2.1 Implement Drizzle schema and DB connection factory
     - Create `db/schema.ts` with `config`, `users`, `access_logs`, `sessions`, and
       `interception_log` tables exactly as in the Data Models section
     - Create a connection factory that opens either `:memory:` (ephemeral) or a file path
       (persistent), returning a typed Drizzle DB; add migration/`createTables` bootstrap
     - _Traceability: Req 3, 4, 8, 9.1, 9.2; Design: Data Models_
 
-  - [ ]* 2.2 Write unit tests for schema/connection factory
+  - [x]* 2.2 Write unit tests for schema/connection factory
     - Verify tables are created for both `:memory:` and file connections; verify a file DB
       round-trips a written row after reopening the same file
     - _Traceability: Req 9.1, 9.2; Design: Data Models_

@@ -23,6 +23,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084569
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131280618
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131488372
       }
     ],
     "2.1 Implement Drizzle schema and DB connection factory": [
@@ -30,6 +40,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084573
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131281519
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131489773
       }
     ],
     "3.1 Implement Bootstrap / StateMode selector": [
@@ -198,6 +218,27 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084654
+      }
+    ],
+    "1. Scaffold monorepo, tooling, and shared types": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131488376
+      }
+    ],
+    "2. Database schema and connection layer": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131489776
+      }
+    ],
+    "2.2 Write unit tests for schema/connection factory": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131490570
       }
     ]
   }
