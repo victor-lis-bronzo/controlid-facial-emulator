@@ -391,6 +391,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084641
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789134458049
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789135147197
       }
     ],
     "18.1 Add GitHub Actions CI workflow": [
@@ -398,6 +408,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084644
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789135158506
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789136123908
       }
     ],
     "18.2 Add GitHub Actions CD workflow": [
@@ -405,6 +425,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084647
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789135159908
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789136124840
       }
     ],
     "19.1 Write root README": [
@@ -412,6 +442,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084650
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789135160477
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789136126238
       }
     ],
     "20. Final checkpoint — full build, tests, and image": [
@@ -419,6 +459,11 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084654
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789136127071
       }
     ],
     "1. Scaffold monorepo, tooling, and shared types": [
@@ -664,6 +709,39 @@
         "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789134416826
+      }
+    ],
+    "17.2 Add image-size and startup smoke check (verification-only, not PBT)": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789134459117
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789135148181
+      }
+    ],
+    "17. Docker packaging": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789135147203
+      }
+    ],
+    "18. CI/CD workflows (verification-only, not PBT)": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789136124845
+      }
+    ],
+    "19. README and documentation (verification-only, not PBT)": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789136126243
       }
     ]
   }

@@ -188,6 +188,17 @@ export async function buildApp(
     }
   });
 
+  // --- Global error + 404 handlers (Req 1.2, 1.4, 1.5). ---
+  // IMPORTANT: these MUST be installed BEFORE any awaited `app.register(...)`
+  // (e.g. `@fastify/static` below). In Fastify, awaiting a plugin registration
+  // finalizes the current encapsulation context; a `setErrorHandler` /
+  // `setNotFoundHandler` applied AFTER that boundary does not attach to routes
+  // declared before it, so those routes silently fall back to Fastify's default
+  // error serialization ({ statusCode, error, message }) — dropping the
+  // `error-description` contract and mis-mapping domain errors to 500. Installing
+  // the handlers here guarantees every route inherits the JSON error contract.
+  installErrorHandlers(app);
+
   // --- Routes. ---
   const requireSession = makeRequireSession(container);
   registerSessionRoutes(app, container, resolved);
@@ -219,10 +230,9 @@ export async function buildApp(
   }
 
   // --- SPA static serving at /admin (Req 7.1, 7.2). ---
+  // Registered last: `@fastify/static` is an awaited plugin registration, and
+  // the error/404 handlers were installed above so they apply to every route.
   await registerStaticAssets(app, options.env ?? process.env);
-
-  // --- Global error + 404 handlers (Req 1.2, 1.4, 1.5). ---
-  installErrorHandlers(app);
 
   await app.ready();
   return app;

@@ -294,41 +294,41 @@ individually committable.
       selection retained on failure (7.8); empty-state rendered when no records (8.6)
     - _Traceability: Req 7.3, 7.8, 8.6; Design: Testing Strategy_
 
-- [ ] 17. Docker packaging
-  - [~] 17.1 Write multi-stage Dockerfile and docker-compose.yml
+- [x] 17. Docker packaging
+  - [x] 17.1 Write multi-stage Dockerfile and docker-compose.yml
     - Multi-stage build: web build → api build (tsc + prune dev deps) → `node:alpine` runner
       copying compiled API + static assets + prod deps; `EXPOSE 8080`; `CMD node dist/main.js`;
       add `docker-compose.yml` mapping host:container port with a persistent-mode volume
     - _Traceability: Req 10.1, 10.2, 10.3, 10.5; Design: Dockerfile plan, docker-compose outline_
 
-  - [ ]* 17.2 Add image-size and startup smoke check (verification-only, not PBT)
+  - [x]* 17.2 Add image-size and startup smoke check (verification-only, not PBT)
     - Script/CI step asserting final image < 200 MB and the container accepts an API request
       within 10 s of start; verified by build/run, not property tests
     - _Traceability: Req 10.2, 10.3; Design: Out-of-scope for PBT_
 
-- [ ] 18. CI/CD workflows (verification-only, not PBT)
-  - [~] 18.1 Add GitHub Actions CI workflow
+- [x] 18. CI/CD workflows (verification-only, not PBT)
+  - [x] 18.1 Add GitHub Actions CI workflow
     - On push to `main` and PR (opened/synchronize/reopened): checkout → install → lint →
       test (vitest incl. property tests); lint/test failure fails and records the step;
       all-green succeeds; 15-minute job timeout
     - _Traceability: Req 11.1–11.6; Design: CI workflow_
 
-  - [~] 18.2 Add GitHub Actions CD workflow
+  - [x] 18.2 Add GitHub Actions CD workflow
     - Trigger on tags `v[0-9]+.[0-9]+.[0-9]+` (non-matching tags do nothing); buildx build →
       on failure stop without publishing → push Docker Hub `<version>` (v stripped) + `latest`
       → on publish failure fail and skip release → create GitHub release named with the tag
       and a changelog of commits since the previous semver tag
     - _Traceability: Req 12.1–12.7; Design: CD workflow_
 
-- [ ] 19. README and documentation (verification-only, not PBT)
-  - [~] 19.1 Write root README
+- [x] 19. README and documentation (verification-only, not PBT)
+  - [x] 19.1 Write root README
     - Document the run command, API and Control Panel address/port; state-mode option name,
       accepted values, and default; list every supported `.fcgi` endpoint by path + method
       referencing the Official API Documentation; a verification step (successful API
       response); and each documented divergence from reference behavior
     - _Traceability: Req 13.1–13.5; Design: Design Decisions (documented divergences)_
 
-- [~] 20. Final checkpoint — full build, tests, and image
+- [x] 20. Final checkpoint — full build, tests, and image
   - Ensure all tests pass, the image builds under budget, and CI is green; ask the user if
     questions arise.
 

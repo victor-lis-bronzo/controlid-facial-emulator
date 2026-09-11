@@ -1,0 +1,51 @@
+# Continuous Integration — lint, build, and test the monorepo (Req 11).
+#
+# Runs on every push to `main` and on pull requests targeting `main`. A single
+# job installs the workspace once and runs the root `lint`, `build`, and `test`
+# scripts (which fan out to both the `api` and `web` workspaces). Any lint error
+# or test failure fails the run and records the failing step (Req 11.3, 11.4);
+# an all-green run reports success (Req 11.5). The job is capped at 15 minutes so
+# a hung run terminates with a failed (timeout) status (Req 11.6).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-build-test:
+    name: Lint, build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15 # Req 11.6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Lint first so style/type violations fail fast (Req 11.1, 11.3).
+      - name: Lint
+        run: npm run lint
+
+      # Build both workspaces to catch compile-time regressions (Req 10 foundation).
+      - name: Build
+        run: npm run build
+
+      # Full test suite: vitest in api (incl. property tests) and web (Req 11.1, 11.4).
+      - name: Test
+        run: npm test
