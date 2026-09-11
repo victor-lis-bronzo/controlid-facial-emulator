@@ -77,6 +77,8 @@ function errorBody(description: string): ErrorBody {
  * the mapping in one place so the contract is consistent across every route.
  */
 function classify(error: unknown): { statusCode: number; description: string } {
+  // --- Layer 1: cross-module `instanceof` (fast path, precise). ---
+
   // Explicit route-level HTTP errors carry their own status + description.
   if (error instanceof HttpError) {
     return { statusCode: error.statusCode, description: error.description };
@@ -97,9 +99,46 @@ function classify(error: unknown): { statusCode: number; description: string } {
     return { statusCode: 400, description: error.message };
   }
 
+  // --- Layer 2: name-based discriminator (robust fallback). ---
+  //
+  // `instanceof` can silently fail when the same error class is reachable via
+  // two distinct module instances (duplicate class identity under transpilation,
+  // bundling, or mixed CJS/ESM resolution). To keep the contract bulletproof we
+  // ALSO classify on the stable, serialization-safe `error.name` set by each
+  // domain error's constructor. This guarantees a domain error maps to the right
+  // 4xx even if identity checks miss (Req 1.2, 3.2, 4.5, 6.6).
+  if (error instanceof Error) {
+    switch (error.name) {
+      case 'HttpError':
+      case 'BadRequestError':
+      case 'UnauthorizedError': {
+        // These carry an explicit statusCode; fall back to 400 if absent.
+        const withStatus = error as Error & { statusCode?: number };
+        const status =
+          typeof withStatus.statusCode === 'number'
+            ? withStatus.statusCode
+            : 400;
+        return { statusCode: status, description: error.message };
+      }
+      // ConfigService and the repository BOTH name their validation error
+      // 'ValidationError'; either maps to a 400 naming the rejected key/param.
+      case 'ValidationError':
+        return { statusCode: 400, description: error.message };
+      case 'SimulationError':
+        return { statusCode: 400, description: error.message };
+      default:
+        break;
+    }
+  }
+
+  // --- Layer 3: FastifyError with an explicit statusCode. ---
+  //
   // Fastify body-parser / schema-validation errors surface as FastifyError with
-  // a `statusCode`. A malformed JSON body or a schema violation is a 400 with an
-  // error-description (Req 1.4).
+  // a `statusCode`. In particular the custom `application/json` parser
+  // (see `app.ts`) throws an Error with `statusCode = 400` on malformed JSON;
+  // that must render as a 400 with an `error-description` (Req 1.4). Any 4xx
+  // FastifyError is honored with its status; a 5xx statusCode falls through to
+  // the generic 500 below.
   const fastifyError = error as FastifyError;
   if (typeof fastifyError.statusCode === 'number') {
     const status = fastifyError.statusCode;
@@ -111,7 +150,7 @@ function classify(error: unknown): { statusCode: number; description: string } {
     }
   }
 
-  // Anything else is an unexpected server error.
+  // --- Layer 4: anything else is an unexpected server error. ---
   const message =
     error instanceof Error ? error.message : 'Internal Server Error';
   return { statusCode: 500, description: message };
