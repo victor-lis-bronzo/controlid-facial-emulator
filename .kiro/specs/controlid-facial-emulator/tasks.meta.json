@@ -1,5 +1,26 @@
 {
-  "pbtResults": {},
+  "pbtResults": {
+    "5.2 Write property test — session validity": {
+      "status": "passed",
+      "lastRunTimestamp": 1789131901129
+    },
+    "4.2 Write property test — configuration round-trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1789132099996
+    },
+    "4.3 Write property test — last-write-wins config replace": {
+      "status": "passed",
+      "lastRunTimestamp": 1789132100901
+    },
+    "4.4 Write property test — config validation is all-or-nothing": {
+      "status": "passed",
+      "lastRunTimestamp": 1789132101996
+    },
+    "6.2 Write property test — filtered log queries return exact matching subset": {
+      "status": "passed",
+      "lastRunTimestamp": 1789132125616
+    }
+  },
   "executionHistory": {
     "1.1 Create root and `api/` project scaffolding and tooling": [
       {
@@ -64,6 +85,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084582
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131781349
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132245609
       }
     ],
     "5.1 Implement SessionService": [
@@ -71,6 +102,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084585
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131782299
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132250307
       }
     ],
     "6.1 Implement ObjectStore and UserRepository": [
@@ -78,6 +119,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084590
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131783697
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132252654
       }
     ],
     "7.1 Implement InterceptionLogger": [
@@ -85,6 +136,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084592
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131784436
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132256406
       }
     ],
     "8. Checkpoint — data + core services": [
@@ -239,6 +300,97 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131490570
+      }
+    ],
+    "4. ConfigService (configuration persistence)": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132245612
+      }
+    ],
+    "4.2 Write property test — configuration round-trip": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132247010
+      }
+    ],
+    "4.3 Write property test — last-write-wins config replace": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132247957
+      }
+    ],
+    "4.4 Write property test — config validation is all-or-nothing": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132249360
+      }
+    ],
+    "5. SessionService": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132250310
+      }
+    ],
+    "5.2 Write property test — session validity": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132251257
+      }
+    ],
+    "6. ObjectStore / UserRepository (log & biometry data)": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132252658
+      }
+    ],
+    "6.2 Write property test — filtered log queries return exact matching subset": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132254058
+      }
+    ],
+    "6.3 Write unit tests for ObjectStore edge cases": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132255008
+      }
+    ],
+    "7. InterceptionLogger": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132256409
+      }
+    ],
+    "7.2 Write property test — interception log strictly newest-first": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132257357
+      }
+    ],
+    "7.3 Write property test — interception log capacity cap": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132258317
+      }
+    ],
+    "7.4 Write property test — inbound body truncation invariant": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132259536
       }
     ]
   }
