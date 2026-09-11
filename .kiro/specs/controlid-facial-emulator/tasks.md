@@ -153,50 +153,50 @@ individually committable.
       `// Feature: controlid-facial-emulator, Property 11`; ≥ 100 iterations
     - _Traceability: Req 8.2; Design: Property 11_
 
-- [~] 8. Checkpoint — data + core services
+- [x] 8. Checkpoint — data + core services
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. PushEngine (webhook dispatch)
-  - [~] 9.1 Implement PushEngine with timeout and retry policy
+- [x] 9. PushEngine (webhook dispatch)
+  - [x] 9.1 Implement PushEngine with timeout and retry policy
     - Implement `resolvePushTarget(endpoint)` composing the final URL, and `dispatch()` using
       undici with a 10 s per-request timeout, up to 3 retries at fixed 5 s intervals (max 4
       attempts), treating only 2xx as success; return a `PushOutcome`; record `no_target` and
       skip POST when no target; record failures with target, final status/timeout, attempts
     - _Traceability: Req 5.1, 5.2, 5.5, 5.6, 5.7, 5.8; Design: PushEngine, Error Handling_
 
-  - [ ]* 9.2 Write property test — push re-targeting composes exact destination URL
+  - [x]* 9.2 Write property test — push re-targeting composes exact destination URL
     - **Property 2: Push re-targeting composes the exact destination URL** — for any valid
       monitor target, dispatch POSTs to exactly `http://<hostname>:<port>/<path>/<endpoint>`
     - Assert against a local stub server / injected client mock; tag
       `// Feature: controlid-facial-emulator, Property 2`; ≥ 100 iterations
     - _Traceability: Req 5.4, 5.1, 3.5; Design: Property 2_
 
-  - [ ]* 9.3 Write property test — push retry is bounded to four attempts
+  - [x]* 9.3 Write property test — push retry is bounded to four attempts
     - **Property 7: Push retry is bounded to four attempts** — for any unreachable/timing-out
       target, exactly 4 attempts are recorded with target, final status/timeout, and count
     - Tag `// Feature: controlid-facial-emulator, Property 7`; ≥ 100 iterations (mock client)
     - _Traceability: Req 5.7, 5.8; Design: Property 7_
 
-  - [ ]* 9.4 Write property test — HTTP 2xx classification of dispatch outcomes
+  - [x]* 9.4 Write property test — HTTP 2xx classification of dispatch outcomes
     - **Property 9: HTTP 2xx classification of dispatch outcomes** — dispatch is successful
       iff the target status code is in 200–299
     - Stub returns generated codes 100–599; tag
       `// Feature: controlid-facial-emulator, Property 9`; ≥ 100 iterations
     - _Traceability: Req 5.2; Design: Property 9_
 
-  - [ ]* 9.5 Write unit test — no-target dispatch records no_target
+  - [x]* 9.5 Write unit test — no-target dispatch records no_target
     - Verify a simulate with no configured target records `no_target` and performs no POST
     - _Traceability: Req 5.5; Design: Error Handling table_
 
-- [ ] 10. SimulationService
-  - [~] 10.1 Implement SimulationService
+- [x] 10. SimulationService
+  - [x] 10.1 Implement SimulationService
     - Implement `simulateAuthorized(userId)` (event 7 `dao` payload incl. identity, appends
       an `access_logs` record), `simulateDenied()` (event 6 `dao`), `forceKeepAlive()`
       (`device_is_alive`); reject authorized-without-identity so no webhook is dispatched;
       complete dispatch within 2 s; delegate to PushEngine
     - _Traceability: Req 6.1–6.6, 4.1; Design: SimulationService, Payload Catalog_
 
-  - [ ]* 10.2 Write unit tests for SimulationService
+  - [x]* 10.2 Write unit tests for SimulationService
     - Authorized-without-identity rejected with error, no webhook (6.6); each event builds the
       grounded payload shape (6.1–6.3); failure after retries surfaces error while preserving
       selection (6.5)
