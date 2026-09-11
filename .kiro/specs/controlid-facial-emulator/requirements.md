@@ -72,3 +72,43 @@ The intended technology direction is Node.js with TypeScript and the Fastify HTT
 6. WHEN a configuration change is submitted for a recognized configuration key that already holds a value, THE API_Server SHALL replace the stored value with the submitted value so that a subsequent read returns only the submitted value.
 7. WHERE the Emulator is running in Persistent_Mode, THE Configuration_Store SHALL retain all stored configuration values across a container restart such that a read issued after restart returns the same values written before the restart.
 8. WHERE the Emulator is not running in Persistent_Mode, WHEN the container restarts, THE Configuration_Store SHALL return the documented default value for every recognized configuration key.
+
+### Requirement 4: Mock Log and Biometry Endpoints
+
+**User Story:** As a Developer, I want the Emulator to answer log-query and biometry requests with structured data, so that I can exercise the parts of my integration that read records and enrollment data.
+
+#### Acceptance Criteria
+
+1. WHEN an Integrating_Client sends a log-query request to the corresponding FCGI_Endpoint, THE API_Server SHALL respond with an HTTP status code of 200 and a collection of access log records structured according to the Official_API_Documentation within 2000 milliseconds.
+2. WHEN an Integrating_Client sends a log-query request and no records exist or no records match the supplied filters, THE API_Server SHALL respond with an HTTP status code of 200 and an empty collection.
+3. WHEN an Integrating_Client sends a biometry request to the corresponding FCGI_Endpoint, THE API_Server SHALL respond with an HTTP status code of 200 and biometry data structured according to the Official_API_Documentation within 2000 milliseconds.
+4. WHEN an Integrating_Client sends a log-query request that includes one or more filter parameters described in the Official_API_Documentation, THE API_Server SHALL return only records for which every supplied filter parameter matches.
+5. IF an Integrating_Client sends a log-query or biometry request with a filter parameter that is unrecognized or whose value fails validation, THEN THE API_Server SHALL respond with an HTTP status code of 400, return no records, and include an error-description field identifying the invalid parameter.
+
+### Requirement 5: Push and Webhook Dispatch Engine
+
+**User Story:** As a Developer, I want the Emulator to dispatch webhooks to my configured server when an access is simulated, so that I can observe how my system reacts to reader events.
+
+#### Acceptance Criteria
+
+1. WHEN a Simulated_Access_Event is initiated, THE Push_Engine SHALL read the Push_Target from the Configuration_Store before dispatching a webhook.
+2. WHEN the Push_Engine dispatches a webhook for a Simulated_Access_Event, THE Push_Engine SHALL send an HTTP POST request to the Push_Target and treat an HTTP response status code in the range 200 to 299 as a successful dispatch.
+3. WHEN the Push_Engine dispatches a webhook, THE Push_Engine SHALL include a payload whose structure and field names match the reader event payload described in the Official_API_Documentation.
+4. WHEN the Push_Target is changed and a subsequent Simulated_Access_Event is initiated, THE Push_Engine SHALL dispatch the webhook to the most recently stored Push_Target.
+5. IF no Push_Target is present in the Configuration_Store when a Simulated_Access_Event is initiated, THEN THE Push_Engine SHALL record the event in the Interception_Log with an indication that no Push_Target is configured and SHALL not attempt an HTTP POST request.
+6. WHEN the Push_Engine sends an HTTP POST request to the Push_Target, THE Push_Engine SHALL wait a maximum of 10 seconds for a response before treating the request as timed out.
+7. IF the Push_Target does not return a response within the 10-second timeout, THEN THE Push_Engine SHALL retry the HTTP POST request up to 3 additional times using a fixed interval of 5 seconds between attempts.
+8. IF the Push_Target is unreachable, times out, or returns a response status code outside the range 200 to 299 after all retry attempts are exhausted, THEN THE Push_Engine SHALL record the failed dispatch in the Interception_Log with the Push_Target, the final response status code or timeout indication, and the total number of attempts made.
+
+### Requirement 6: Simulated Access Events
+
+**User Story:** As a Developer, I want to simulate authorized access, denied access, and keep-alive events, so that I can drive my integration through its full range of reader-originated scenarios.
+
+#### Acceptance Criteria
+
+1. WHEN a Developer initiates a Simulated_Access_Event of type authorized access for a selected identity, THE Push_Engine SHALL dispatch a webhook payload conforming to the authorized-identification structure defined in the Official_API_Documentation, including the selected identity's identifier, to the configured webhook destination.
+2. WHEN a Developer initiates a Simulated_Access_Event of type denied access, THE Push_Engine SHALL dispatch a webhook payload conforming to the denied-identification structure defined in the Official_API_Documentation to the configured webhook destination.
+3. WHEN a Developer initiates a keep-alive event, THE Push_Engine SHALL dispatch a webhook payload conforming to the device keep-alive message structure defined in the Official_API_Documentation to the configured webhook destination.
+4. THE Push_Engine SHALL complete dispatch of each Simulated_Access_Event webhook payload within 2 seconds of the Developer initiating the event.
+5. IF the configured webhook destination is unreachable or returns a response outside the 200-299 success range when dispatching a Simulated_Access_Event, THEN THE Push_Engine SHALL retry dispatch up to 3 times and, if all attempts fail, present an error indication to the Developer identifying the failed event while preserving the Developer's selected identity and event configuration.
+6. IF a Developer initiates a Simulated_Access_Event of type authorized access without a selected identity, THEN THE Push_Engine SHALL reject the event, dispatch no webhook payload, and present an error indication that an identity must be selected.
