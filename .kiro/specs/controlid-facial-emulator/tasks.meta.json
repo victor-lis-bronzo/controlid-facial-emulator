@@ -153,6 +153,11 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084595
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132925438
       }
     ],
     "9.1 Implement PushEngine with timeout and retry policy": [
@@ -160,6 +165,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084599
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132309982
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132916402
       }
     ],
     "10.1 Implement SimulationService": [
@@ -167,6 +182,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084602
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132634184
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132914055
       }
     ],
     "11.1 Wire dependency-injection composition root and Fastify instance": [
@@ -391,6 +416,55 @@
         "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789132259536
+      }
+    ],
+    "10. SimulationService": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132914059
+      }
+    ],
+    "10.2 Write unit tests for SimulationService": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132915010
+      }
+    ],
+    "9. PushEngine (webhook dispatch)": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132916406
+      }
+    ],
+    "9.2 Write property test — push re-targeting composes exact destination URL": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132917355
+      }
+    ],
+    "9.3 Write property test — push retry is bounded to four attempts": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132918750
+      }
+    ],
+    "9.4 Write property test — HTTP 2xx classification of dispatch outcomes": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132919705
+      }
+    ],
+    "9.5 Write unit test — no-target dispatch records no_target": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132921825
       }
     ]
   }
