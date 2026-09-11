@@ -112,3 +112,46 @@ The intended technology direction is Node.js with TypeScript and the Fastify HTT
 4. THE Push_Engine SHALL complete dispatch of each Simulated_Access_Event webhook payload within 2 seconds of the Developer initiating the event.
 5. IF the configured webhook destination is unreachable or returns a response outside the 200-299 success range when dispatching a Simulated_Access_Event, THEN THE Push_Engine SHALL retry dispatch up to 3 times and, if all attempts fail, present an error indication to the Developer identifying the failed event while preserving the Developer's selected identity and event configuration.
 6. IF a Developer initiates a Simulated_Access_Event of type authorized access without a selected identity, THEN THE Push_Engine SHALL reject the event, dispatch no webhook payload, and present an error indication that an identity must be selected.
+
+### Requirement 7: Web Control Panel
+
+**User Story:** As a Developer, I want a web control panel served by the Emulator, so that I can trigger events and inspect activity without an external HTTP client.
+
+#### Acceptance Criteria
+
+1. WHEN a Developer navigates to the `/admin` path, THE API_Server SHALL serve the static Control_Panel application and return the rendered page within 2000 milliseconds.
+2. IF a Developer navigates to a path under `/admin` that does not correspond to an existing static asset, THEN THE API_Server SHALL serve the Control_Panel application entry point so client-side routing can resolve the path.
+3. THE Control_Panel SHALL present a control to initiate a Simulated_Access_Event of type authorized access, including a selection input that lists at least one selectable identity and requires a single identity to be selected before the control can be activated.
+4. THE Control_Panel SHALL present a control to initiate a Simulated_Access_Event of type denied access.
+5. THE Control_Panel SHALL present a control to initiate a keep-alive event.
+6. WHEN a Developer activates a control in the Control_Panel, THE Control_Panel SHALL send the corresponding request to the API_Server.
+7. WHEN the API_Server returns a success response for a request initiated from the Control_Panel, THE Control_Panel SHALL display the returned outcome within 2000 milliseconds of receiving the response.
+8. IF the API_Server returns an error response or the request fails to complete, THEN THE Control_Panel SHALL display a visible message indicating the request failed and SHALL retain the Developer's current selections without resubmitting the request.
+
+### Requirement 8: Interception Logging and Observability
+
+**User Story:** As a Developer, I want to see the requests the Emulator received and the webhooks it sent, so that I can debug my integration.
+
+#### Acceptance Criteria
+
+1. WHEN the API_Server receives a request from an Integrating_Client, THE Interception_Logger SHALL record the request path, HTTP method, an ISO 8601 UTC timestamp with millisecond precision, and the request body in the Interception_Log within 500 milliseconds.
+2. IF an inbound request body exceeds 64 KB, THEN THE Interception_Logger SHALL record the first 64 KB of the body and mark the record as truncated.
+3. WHEN the Push_Engine dispatches a webhook, THE Interception_Logger SHALL record the Push_Target, an ISO 8601 UTC timestamp with millisecond precision, the dispatched payload, and the dispatch outcome in the Interception_Log.
+4. IF a webhook dispatch fails, THEN THE Interception_Logger SHALL record the failure category and, when available, the returned HTTP status code in the corresponding Interception_Log record.
+5. WHEN a Developer opens the Interception_Log view in the Control_Panel, THE Control_Panel SHALL display recorded inbound requests and outbound webhook records ordered by recorded timestamp from most recent to oldest.
+6. WHEN a Developer opens the Interception_Log view and no records exist, THE Control_Panel SHALL display an explicit empty-state indication.
+7. WHEN the Interception_Log reaches 10,000 records, THE Interception_Logger SHALL discard the oldest records so that no more than 10,000 records are retained.
+8. WHERE the Emulator is running in Persistent_Mode, THE Interception_Log SHALL retain its records across a container restart.
+
+### Requirement 9: Ephemeral and Persistent State Modes
+
+**User Story:** As a Developer, I want to choose between persistent and ephemeral state, so that I can retain data during local development and discard it during CI runs.
+
+#### Acceptance Criteria
+
+1. WHERE the Emulator is configured for Persistent_Mode with a mounted storage volume, THE Emulator SHALL store the Configuration_Store and Interception_Log on the mounted volume such that all records written before the container stops are readable after the container is restarted with the same mounted volume.
+2. WHERE the Emulator is configured for Ephemeral_Mode, THE Emulator SHALL store the Configuration_Store and Interception_Log in storage that is deleted when the container stops, such that a subsequent container start presents an empty Configuration_Store (except for default values) and an empty Interception_Log.
+3. WHEN the Emulator starts and finds the Configuration_Store absent or containing zero configuration records, THE Emulator SHALL initialize the Configuration_Store with the documented default values within 5 seconds of startup.
+4. WHEN the Emulator starts, THE Emulator SHALL read the state mode from its startup/environment configuration and apply the selected mode before accepting any request.
+5. IF the Emulator starts configured for Persistent_Mode but no mounted storage volume is accessible for read and write, THEN THE Emulator SHALL abort startup, remain in a non-serving state, and emit a startup error indicating that the required mounted volume is unavailable.
+6. IF the startup configuration specifies no state mode or an unrecognized state mode value, THEN THE Emulator SHALL default to Ephemeral_Mode and emit a warning indicating that the default mode was applied.
