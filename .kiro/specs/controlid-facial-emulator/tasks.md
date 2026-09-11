@@ -271,25 +271,25 @@ individually committable.
 - [x] 15. Checkpoint — full API surface
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 16. React + Vite control panel (`web/`)
-  - [~] 16.1 Scaffold the `web/` React + Vite app and API client
+- [x] 16. React + Vite control panel (`web/`)
+  - [x] 16.1 Scaffold the `web/` React + Vite app and API client
     - Create `web/` with Vite, TypeScript, ESLint; add an API client for `/api/identities`,
       `/api/simulate/*`, and `/api/interception`; configure the build to output the static
       assets served at `/admin`
     - _Traceability: Req 7 (Tech Stack), 7.6; Design: Frontend (React + Vite)_
 
-  - [~] 16.2 Implement event controls with identity selection
+  - [x] 16.2 Implement event controls with identity selection
     - Build controls for authorized (with identity picker listing ≥ 1 identity, requiring a
       selection before activation), denied, and keep-alive; send the corresponding request on
       activation and display the returned outcome within budget
     - _Traceability: Req 7.3, 7.4, 7.5, 7.6, 7.7; Design: ControlPanelApi_
 
-  - [~] 16.3 Implement error handling and Interception Log view
+  - [x] 16.3 Implement error handling and Interception Log view
     - On error/failed request, show a visible message and retain selections without
       resubmitting; render the interception log newest-first with an explicit empty-state
     - _Traceability: Req 7.8, 8.5, 8.6; Design: ControlPanelApi, Interception API_
 
-  - [ ]* 16.4 Write component tests for control panel behavior
+  - [x]* 16.4 Write component tests for control panel behavior
     - Authorized control disabled until an identity is selected (7.3); error message shown and
       selection retained on failure (7.8); empty-state rendered when no records (8.6)
     - _Traceability: Req 7.3, 7.8, 8.6; Design: Testing Strategy_

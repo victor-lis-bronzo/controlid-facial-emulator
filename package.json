@@ -12,12 +12,13 @@
     "web"
   ],
   "scripts": {
-    "lint": "npm run lint -w api",
-    "lint:fix": "npm run lint:fix -w api",
+    "lint": "npm run lint -w api && npm run lint -w web",
+    "lint:fix": "npm run lint:fix -w api && npm run lint:fix -w web",
     "format": "npm run format -w api",
-    "test": "npm run test -w api",
-    "build": "npm run build -w api",
-    "typecheck": "npm run typecheck -w api",
-    "dev": "npm run dev -w api"
+    "test": "npm run test -w api && npm run test -w web",
+    "build": "npm run build -w api && npm run build -w web",
+    "typecheck": "npm run typecheck -w api && npm run typecheck -w web",
+    "dev": "npm run dev -w api",
+    "dev:web": "npm run dev -w web"
   }
 }
