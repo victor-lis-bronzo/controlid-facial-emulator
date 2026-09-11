@@ -11,10 +11,13 @@ watch the emulator dispatch webhooks to your server, and inspect every request a
 response in a live interception log — no scarce hardware and no external HTTP client
 required.
 
-> **Fidelity source.** Endpoint paths, methods, request field names, response shapes, and
+> **Fidelity sources.** Endpoint paths, methods, request field names, response shapes, and
 > webhook payloads are grounded in the official
-> [Control-iD Access API documentation](https://www.controlid.com.br/docs/access-api-pt/).
-> That documentation is the single source of truth for behavior; see
+> [Control-iD Access API documentation](https://www.controlid.com.br/docs/access-api-pt/)
+> and the official
+> [Control-iD integration examples](https://github.com/controlid/integracao) repository
+> (see its `Controle de Acesso` folder, including the NodeJS Push, Monitor, and
+> Online-server samples). Those are the single sources of truth for behavior; see
 > [Documented divergences](#documented-divergences) for where the emulator deliberately
 > simplifies the hardware.
 
@@ -254,6 +257,20 @@ To cut a release:
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+---
+
+## References
+
+The emulator's behavior is grounded in Control-iD's official materials:
+
+- **API documentation** — [Control-iD Access API (pt)](https://www.controlid.com.br/docs/access-api-pt/): endpoint paths, request/response field names, configuration modules, and the Monitor/Push notification payloads.
+- **Integration examples** — [`controlid/integracao`](https://github.com/controlid/integracao) (folder `Controle de Acesso`). The NodeJS samples were used to validate the emulator's request/response shapes and webhook flows:
+  - **`Exemplo API Monitor - NodeJS`** — configures the device Monitor via `set_configuration.fcgi` with a `monitor` block `{ request_timeout, hostname, port, path: "api/notifications" }`, and receives device notifications at `POST /api/notifications/{dao,door,operation_mode,template,face_template,card,secbox,user_image,catra_event,usb_drive}`. This is the mechanism the emulator's Push Engine reproduces.
+  - **`Exemplo API Modo Push - NodeJS`** — the alternative proactive Push mode, configured with a `push_server` block (`push_request_timeout`, `push_request_period`, `push_remote_address`).
+  - **`Servidor Online - NodeJS`** — an online-identification server replying to identification events with the *Mensagem de Retorno* shape `{ result: { event, user_id, ... } }` (event `7` granted, `3` not identified, `4` pending), and serving `user_get_image.fcgi` / `face_create.fcgi`.
+
+Where the emulator deliberately simplifies these behaviors, the difference is listed under [Documented divergences](#documented-divergences).
 
 ---
 
