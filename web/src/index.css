@@ -261,3 +261,313 @@ body {
   gap: 1rem;
   margin-bottom: 1rem;
 }
+
+
+/* ==========================================================================
+   Admin Management Panel layout (Req 11.2, 11.3, 11.6)
+   Mobile-first: the sidebar is a top nav on narrow viewports and becomes a
+   persistent left rail at >= 900px. At >= 360px every section's primary
+   controls stay reachable without horizontal PAGE scroll; wide tables scroll
+   inside their own container.
+   ========================================================================== */
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 1rem;
+}
+
+.sidebar__brand {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.75rem;
+}
+
+.sidebar__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.sidebar__subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.sidebar__link {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sidebar__link:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.sidebar__link--active {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+  font-weight: 600;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* Left-rail sidebar on wide viewports. */
+@media (min-width: 900px) {
+  .layout {
+    flex-direction: row;
+  }
+
+  .sidebar {
+    flex: 0 0 220px;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+
+  .sidebar__nav {
+    flex-direction: column;
+  }
+
+  .sidebar__link {
+    width: 100%;
+  }
+}
+
+/* --- Tables: scroll within their own container, not the page (Req 11.6) --- */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-actions {
+  display: flex;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.button--small {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* --- Modal dialog --- */
+.modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.7);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  margin: 2rem auto;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.modal__close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal__close:hover {
+  color: var(--text);
+}
+
+.modal__body {
+  padding: 1.25rem;
+}
+
+/* --- Multi-select (checkbox list) --- */
+.multi-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-2);
+}
+
+.multi-select__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.empty-state--compact {
+  padding: 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* --- Time range editor --- */
+.time-range-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.time-range {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin: 0;
+}
+
+.weekday-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  margin-bottom: 0.7rem;
+}
+
+.weekday {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.time-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.time-inputs .field {
+  margin-bottom: 0;
+}
+
+/* --- Access-log filter row --- */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.filter-row .field {
+  margin-bottom: 0;
+  min-width: 8rem;
+}
+
+/* --- Dashboard stat cards --- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.85rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.stat-card__value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-card__label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* --- Avatar --- */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.avatar--photo {
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.avatar--initials {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.photo-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+}

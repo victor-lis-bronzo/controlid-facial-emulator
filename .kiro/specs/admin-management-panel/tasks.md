@@ -298,7 +298,7 @@ selection is required.
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 11. Frontend: hash router + navigation shell
-  - [ ] 11.1 Add `useHashRoute` hook and nav shell in `web/src/App.tsx`
+  - [x] 11.1 Add `useHashRoute` hook and nav shell in `web/src/App.tsx`
     - Add a `useHashRoute` hook over `window.location.hash` with routes `#/dashboard`,
       `#/users`, `#/groups`, `#/time-zones`, `#/access-rules`, `#/portals`, `#/access-logs`,
       `#/simulate`, `#/interception` (default `#/dashboard`); render a persistent sidebar/top-bar
@@ -306,7 +306,7 @@ selection is required.
       the existing `EventControls`/`InterceptionLog` renders wired unchanged.
     - _Requirements: 11.2, 11.3, 11.4, 12.3, 12.4_ · _Design: Frontend → Navigation and routing_
 
-  - [ ] 11.2 Add admin API clients + reusable UI primitives in `web/src`
+  - [x] 11.2 Add admin API clients + reusable UI primitives in `web/src`
     - Extend `web/src/api/client.ts` with `adminUsers`, `adminGroups`, `adminPortals`,
       `adminTimeZones`, `adminAccessRules`, `adminAccessLogs`, `adminDashboard` (same-origin,
       reusing `request<T>`/`ApiError`, appending `?session=` to mutations; a session helper
@@ -315,50 +315,50 @@ selection is required.
       under `web/src/components`.
     - _Requirements: 11.5, 3.4, 10.1_ · _Design: Frontend → API client; Reusable components_
 
-  - [ ] 11.3 Responsive layout in `web/src/index.css`
+  - [x] 11.3 Responsive layout in `web/src/index.css`
     - Add mobile-first CSS so at viewport width ≥ 360 px every section's primary controls are
       reachable without horizontal page scrolling; sidebar collapses to a top nav below a small
       breakpoint; wide tables scroll within their own container.
     - _Requirements: 11.6_ · _Design: Frontend → Responsiveness_
 
 - [ ] 12. Frontend sections (one at a time)
-  - [ ] 12.1 Portals section (`web/src/components/PortalsSection.tsx` + `PortalForm.tsx`)
+  - [x] 12.1 Portals section (`web/src/components/PortalsSection.tsx` + `PortalForm.tsx`)
     - List/create/edit/delete over `adminPortals`; show `ErrorBanner` on `ApiError` without
       clearing the form.
     - _Requirements: 6.1, 6.3, 6.5, 6.6, 11.3, 11.5_ · _Design: Frontend → Sections_
 
-  - [ ] 12.2 Groups section (`GroupsSection.tsx` + `GroupForm.tsx`)
+  - [x] 12.2 Groups section (`GroupsSection.tsx` + `GroupForm.tsx`)
     - List (with member count), create/edit (member picker), delete; surface 409 message on
       referenced delete.
     - _Requirements: 4.1, 4.3, 4.4, 4.6, 4.8, 11.3, 11.5_ · _Design: Frontend → Sections_
 
-  - [ ] 12.3 Time Zones section (`TimeZonesSection.tsx` + `TimeZoneForm.tsx`)
+  - [x] 12.3 Time Zones section (`TimeZonesSection.tsx` + `TimeZoneForm.tsx`)
     - List/create/edit/delete with `TimeRangeEditor` (weekday checkboxes + `HH:MM` inputs);
       surface range/day validation errors inline.
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7, 5.8, 11.3, 11.5_ · _Design: Frontend → Sections_
 
-  - [ ] 12.4 Access Rules section (`AccessRulesSection.tsx` + `AccessRuleForm.tsx`)
+  - [x] 12.4 Access Rules section (`AccessRulesSection.tsx` + `AccessRuleForm.tsx`)
     - List/create/edit/delete selecting Groups/Time Zones/Portals; surface empty-set / unknown-
       reference 400 messages inline.
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.6, 7.8, 11.3, 11.5_ · _Design: Frontend → Sections_
 
-  - [ ] 12.5 Users section (`UsersSection.tsx` + `UserForm.tsx`) with photo + `Avatar`
+  - [x] 12.5 Users section (`UsersSection.tsx` + `UserForm.tsx`) with photo + `Avatar`
     - List/create/edit/delete users with group membership; upload/delete Facial_Photo and
       render the stored photo via `Avatar` (`<img src="/user_get_image.fcgi?user_id=...">`);
       surface 400/413 messages inline.
     - _Requirements: 2.1, 2.4, 2.5, 2.7, 2.8, 3.2, 3.3, 3.4, 3.6, 11.3, 11.5_ · _Design: Frontend → Sections; Avatar_
 
-  - [ ] 12.6 Access Logs section (`AccessLogsSection.tsx`)
+  - [x] 12.6 Access Logs section (`AccessLogsSection.tsx`)
     - Filterable table (user id / event type / date range) over `adminAccessLogs`, newest-first,
       empty-state handling.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7, 11.3_ · _Design: Frontend → Sections_
 
-  - [ ] 12.7 Dashboard section (`Dashboard.tsx`)
+  - [x] 12.7 Dashboard section (`Dashboard.tsx`)
     - Render aggregate counts and the 10 most-recent Access_Log_Records from
       `GET /api/admin/dashboard`.
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 11.3_ · _Design: Frontend → Sections_
 
-  - [ ]* 12.8 Frontend component tests + preserved-section regression
+  - [x]* 12.8 Frontend component tests + preserved-section regression
     - Add render/interaction tests for the router shell and a couple of sections (error banner
       retains input on `ApiError`; avatar renders when `hasPhoto`), and confirm the existing
       `EventControls`/`InterceptionLog` component tests still pass unchanged.
