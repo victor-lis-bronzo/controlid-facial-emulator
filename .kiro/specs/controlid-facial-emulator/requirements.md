@@ -155,3 +155,54 @@ The intended technology direction is Node.js with TypeScript and the Fastify HTT
 4. WHEN the Emulator starts, THE Emulator SHALL read the state mode from its startup/environment configuration and apply the selected mode before accepting any request.
 5. IF the Emulator starts configured for Persistent_Mode but no mounted storage volume is accessible for read and write, THEN THE Emulator SHALL abort startup, remain in a non-serving state, and emit a startup error indicating that the required mounted volume is unavailable.
 6. IF the startup configuration specifies no state mode or an unrecognized state mode value, THEN THE Emulator SHALL default to Ephemeral_Mode and emit a warning indicating that the default mode was applied.
+
+### Requirement 10: Single-Container Distribution
+
+**User Story:** As a Developer, I want the Emulator to run from a single lightweight container, so that I can start it with one command.
+
+#### Acceptance Criteria
+
+1. THE Container_Image SHALL serve both the API_Server endpoints and the static Control_Panel from a single running container listening on one exposed TCP port.
+2. THE Container_Image SHALL be produced from a multi-stage build whose final stage is based on a Node.js Alpine runtime image and whose final image size does not exceed 200 MB.
+3. WHEN the Container_Image is started with default settings, THE Emulator SHALL accept API requests within 10 seconds of container start without requiring additional manual configuration steps.
+4. IF the Container_Image is started and a required runtime dependency or environment variable is missing or invalid, THEN THE Emulator SHALL terminate startup with a non-zero exit code and emit a log message indicating the specific missing or invalid item, without listening on the exposed port.
+5. THE project SHALL provide a `docker-compose.yml` file that starts the Emulator for local testing with a single `docker compose up` command and maps the exposed container port to a host port.
+
+### Requirement 11: Continuous Integration Pipeline
+
+**User Story:** As a maintainer, I want automated linting and testing on changes to the main branch, so that regressions are caught before release.
+
+#### Acceptance Criteria
+
+1. WHEN a commit is pushed to the main branch, THE CI_Pipeline SHALL start a run and execute the project linter followed by the automated test suite within 60 seconds of the push event being received.
+2. WHEN a pull request targeting the main branch is opened, updated, or reopened, THE CI_Pipeline SHALL run the project linter and the automated test suite before the pull request is eligible to merge.
+3. IF the linter reports one or more errors during the CI_Pipeline, THEN THE CI_Pipeline SHALL report a failed status for the run and record the failing check as the linter step.
+4. IF one or more automated tests fail during the CI_Pipeline, THEN THE CI_Pipeline SHALL report a failed status for the run and record the failing check as the test step.
+5. WHEN the linter completes with zero errors and every automated test passes, THE CI_Pipeline SHALL report a successful status for the run.
+6. IF the CI_Pipeline run does not complete within 15 minutes of starting, THEN THE CI_Pipeline SHALL terminate the run and report a failed status indicating a timeout.
+
+### Requirement 12: Continuous Delivery and Release
+
+**User Story:** As a maintainer, I want tagged releases to build and publish the image automatically, so that consumers can pull a versioned image from Docker Hub.
+
+#### Acceptance Criteria
+
+1. WHEN a Git tag matching the semantic version format `vMAJOR.MINOR.PATCH` (where MAJOR, MINOR, and PATCH are each integers from 0 to 999999) is pushed to the repository, THE CD_Pipeline SHALL build the Container_Image within 30 minutes of the tag push event.
+2. IF the pushed tag does not match the semantic version format `vMAJOR.MINOR.PATCH`, THEN THE CD_Pipeline SHALL NOT build or publish the Container_Image and SHALL complete without producing any published artifact.
+3. IF the Container_Image build fails, THEN THE CD_Pipeline SHALL terminate without publishing any Container_Image to Docker Hub and SHALL report a failed pipeline status indicating the build failure.
+4. WHEN the CD_Pipeline successfully builds the Container_Image on a semantic version tag, THE CD_Pipeline SHALL publish the Container_Image to Docker Hub with a tag equal to the semantic version tag with the leading `v` removed (e.g., tag `v1.2.3` publishes image tag `1.2.3`).
+5. WHEN the CD_Pipeline successfully publishes the version-tagged Container_Image to Docker Hub, THE CD_Pipeline SHALL also publish the identical Container_Image to Docker Hub with the `latest` tag.
+6. IF publishing the Container_Image to Docker Hub fails, THEN THE CD_Pipeline SHALL report a failed pipeline status indicating the publish failure and SHALL NOT create a GitHub release.
+7. WHEN the CD_Pipeline successfully publishes the Container_Image to Docker Hub on a semantic version tag, THE CD_Pipeline SHALL create a GitHub release named with the semantic version tag and containing a changelog listing the commit messages merged since the previous semantic version tag.
+
+### Requirement 13: Documentation and Onboarding
+
+**User Story:** As a Developer, I want clear documentation, so that I can run and integrate with the Emulator quickly.
+
+#### Acceptance Criteria
+
+1. THE project SHALL provide a README file at the repository root that documents the command to run the Container_Image, the network address and port to reach the API_Server, and the network address and port to reach the Control_Panel.
+2. THE README file SHALL document each configuration option that selects Persistent_Mode or Ephemeral_Mode, including the option name, its accepted values, and the default value applied when the option is unset.
+3. THE README file SHALL list every supported FCGI_Endpoint by path and HTTP method, and SHALL reference the Official_API_Documentation (https://www.controlid.com.br/docs/access-api-pt/) as the fidelity source for endpoint behavior.
+4. WHEN a Developer follows the README run instructions on a supported environment, THE README SHALL provide a verification step whose expected observable result (a successful response from the API_Server) confirms the Emulator is running.
+5. IF a documented FCGI_Endpoint diverges in behavior from the Official_API_Documentation, THEN THE README SHALL document the specific divergence so a reader can distinguish emulated behavior from the reference behavior.
