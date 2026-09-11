@@ -156,14 +156,17 @@ export function registerObjectRoutes(
       throw new BadRequestError("Parameter 'user_id' must be a positive integer.");
     }
 
-    const image = await container.users.getImage(userId);
+    const image = await container.users.getImageWithMime(userId);
     if (image === null) {
       // Documented choice: no stored image → 404 with error-description rather
       // than an ambiguous empty 200 body.
       throw new HttpError(404, `No image stored for user_id ${String(userId)}.`);
     }
-    reply.type('application/octet-stream');
-    return image;
+    // Serve the stored bytes with a content type matching the stored image
+    // format (image/jpeg or image/png) so the browser/avatar renders it
+    // correctly (Req 3.5). Route shape and auth are unchanged.
+    reply.type(image.mime);
+    return image.bytes;
   };
 
   app.get('/user_get_image.fcgi', { preHandler: requireSession }, userGetImageHandler);
