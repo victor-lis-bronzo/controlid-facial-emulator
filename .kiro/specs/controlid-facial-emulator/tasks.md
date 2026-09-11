@@ -69,84 +69,84 @@ individually committable.
       empty (9.3); missing/invalid required env var terminates with non-zero exit (10.4)
     - _Traceability: Req 9.3, 9.5, 9.6, 10.4; Design: Error Handling table_
 
-- [ ] 4. ConfigService (configuration persistence)
-  - [~] 4.1 Implement ConfigService with defaults, validation, and target resolution
+- [x] 4. ConfigService (configuration persistence)
+  - [x] 4.1 Implement ConfigService with defaults, validation, and target resolution
     - Implement `get(module, keys?)` filling documented defaults for unset keys, `set(patch)`
       as all-or-nothing with `ValidationError` naming the rejected key, `getDefaults()`, and
       `resolvePushTarget()` composing `http://<hostname>:<port>/<path>` (or `null` when unset)
     - Enforce replace/last-write-wins semantics and Push_Target 1–2048 char rule
     - _Traceability: Req 3.1–3.6, 5.1; Design: ConfigService_
 
-  - [ ]* 4.2 Write property test — configuration round-trip
+  - [x]* 4.2 Write property test — configuration round-trip
     - **Property 1: Configuration round-trip** — for any valid config write, a subsequent
       read returns exactly the written values
     - Tag `// Feature: controlid-facial-emulator, Property 1`; ≥ 100 iterations
     - _Traceability: Req 3.1, 3.3; Design: Property 1_
 
-  - [ ]* 4.3 Write property test — last-write-wins config replace
+  - [x]* 4.3 Write property test — last-write-wins config replace
     - **Property 6: Idempotent (last-write-wins) config replace** — for any recognized key
       and two sequential writes, a read returns only the second value
     - Tag `// Feature: controlid-facial-emulator, Property 6`; ≥ 100 iterations
     - _Traceability: Req 3.6; Design: Property 6_
 
-  - [ ]* 4.4 Write property test — config validation is all-or-nothing
+  - [x]* 4.4 Write property test — config validation is all-or-nothing
     - **Property 8: Config validation is all-or-nothing** — any write with ≥ 1 invalid
       key/value is rejected whole, store unchanged, error names a rejected key
     - Tag `// Feature: controlid-facial-emulator, Property 8`; ≥ 100 iterations
     - _Traceability: Req 3.2, 1.4; Design: Property 8_
 
-- [ ] 5. SessionService
-  - [~] 5.1 Implement SessionService
+- [x] 5. SessionService
+  - [x] 5.1 Implement SessionService
     - Implement `issue()` (URL-safe random token, persisted with issuedAt/expiresAt =
       issuedAt + 3600 s) and `validate(token)` returning `valid|expired|invalid` against the
       3600 s TTL
     - _Traceability: Req 2.1, 2.4, 2.5; Design: SessionService, `sessions` model_
 
-  - [ ]* 5.2 Write property test — session validity
+  - [x]* 5.2 Write property test — session validity
     - **Property 3: Session validity** — issued tokens are valid while elapsed < 3600 s and
       rejected (401, command not processed) when absent/empty/malformed/expired
     - Use fake timers around the 3600 s boundary; tag
       `// Feature: controlid-facial-emulator, Property 3`; ≥ 100 iterations
     - _Traceability: Req 2.4, 2.5; Design: Property 3_
 
-- [ ] 6. ObjectStore / UserRepository (log & biometry data)
-  - [~] 6.1 Implement ObjectStore and UserRepository
+- [x] 6. ObjectStore / UserRepository (log & biometry data)
+  - [x] 6.1 Implement ObjectStore and UserRepository
     - Implement `create/load/modify/destroy` over the object model with filter-based `load`,
       and `UserRepository.list()`, `getImage()`, `appendAccessLog()`; validate filter params
       and signal unrecognized/invalid filters
     - _Traceability: Req 4.1–4.5; Design: ObjectStore / UserRepository, `users`/`access_logs`_
 
-  - [ ]* 6.2 Write property test — filtered log queries return exact matching subset
+  - [x]* 6.2 Write property test — filtered log queries return exact matching subset
     - **Property 10: Filtered log queries return exactly the matching subset** — for any set
       of records and any valid filter subset, `load` returns precisely the matching records
     - Tag `// Feature: controlid-facial-emulator, Property 10`; ≥ 100 iterations
     - _Traceability: Req 4.4; Design: Property 10_
 
-  - [ ]* 6.3 Write unit tests for ObjectStore edge cases
+  - [x]* 6.3 Write unit tests for ObjectStore edge cases
     - Empty/no-match query returns empty collection (4.2); unrecognized/invalid filter
       returns validation error naming the parameter (4.5); biometry returns structured data
     - _Traceability: Req 4.2, 4.3, 4.5; Design: Error Handling table_
 
-- [ ] 7. InterceptionLogger
-  - [~] 7.1 Implement InterceptionLogger
+- [x] 7. InterceptionLogger
+  - [x] 7.1 Implement InterceptionLogger
     - Implement `recordInbound`/`recordOutbound` (ISO 8601 UTC ms timestamps), 64 KB body
       truncation with `truncated=true`, `query(limit?)` ordered `id DESC` (newest-first),
       and capacity enforcement discarding oldest beyond 10,000
     - _Traceability: Req 8.1–8.4, 8.5, 8.7; Design: InterceptionLogger, `interception_log`_
 
-  - [ ]* 7.2 Write property test — interception log strictly newest-first
+  - [x]* 7.2 Write property test — interception log strictly newest-first
     - **Property 4: Interception log is strictly newest-first** — for any sequence of
       recorded events, the view returns them with strictly decreasing ids
     - Tag `// Feature: controlid-facial-emulator, Property 4`; ≥ 100 iterations
     - _Traceability: Req 8.5; Design: Property 4_
 
-  - [ ]* 7.3 Write property test — interception log capacity cap
+  - [x]* 7.3 Write property test — interception log capacity cap
     - **Property 5: Interception log capacity cap** — for any N > 10000 writes, exactly the
       10000 newest records are retained
     - Use N in (10000, 12000]; tag `// Feature: controlid-facial-emulator, Property 5`; ≥ 100
     - _Traceability: Req 8.7; Design: Property 5_
 
-  - [ ]* 7.4 Write property test — inbound body truncation invariant
+  - [x]* 7.4 Write property test — inbound body truncation invariant
     - **Property 11: Inbound body truncation invariant** — bodies > 64 KB store exactly the
       first 64 KB and are marked truncated; otherwise stored in full and not truncated
     - Use body sizes straddling 65536; tag
