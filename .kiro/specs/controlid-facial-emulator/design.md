@@ -589,3 +589,198 @@ release named with the tag, changelog = commit messages since previous semver ta
 (Req 12.7).
 
 
+## Correctness Properties
+
+*A property is a characteristic or behavior that should hold true across all valid
+executions of a system — essentially, a formal statement about what the system should do.
+Properties serve as the bridge between human-readable specifications and machine-verifiable
+correctness guarantees.*
+
+These properties were derived from the acceptance-criteria prework analysis. Each is
+universally quantified and traced to the requirement(s) it validates. They are implemented
+with **fast-check** property tests (minimum 100 iterations each). The first seven are the
+headline properties mandated for this feature; the remainder add unique validation value.
+
+### Property 1: Configuration round-trip
+
+*For any* valid configuration write (a map of recognized keys to valid values), a
+subsequent read returns exactly the written values.
+
+**Validates: Requirements 3.1, 3.3**
+
+### Property 2: Push re-targeting composes the exact destination URL
+
+*For any* valid monitor target (`hostname`, `port`, `path`), after that target is written
+to configuration, a simulated access event dispatches its webhook to exactly the composed
+URL `http://<hostname>:<port>/<path>/<endpoint>`.
+
+**Validates: Requirements 5.4, 5.1, 3.5**
+
+### Property 3: Session validity
+
+*For any* token issued by a successful login: a protected request presenting that token is
+processed while the elapsed time since issuance is under 3600 seconds, and any request
+presenting an absent, empty, malformed, or expired (elapsed ≥ 3600 s) token is rejected
+with `401` and the command is not processed.
+
+**Validates: Requirements 2.4, 2.5**
+
+### Property 4: Interception log is strictly newest-first
+
+*For any* sequence of recorded inbound/outbound events, the interception log view returns
+them ordered from most recent to oldest (record ids strictly decreasing).
+
+**Validates: Requirements 8.5**
+
+### Property 5: Interception log capacity cap
+
+*For any* number of records N > 10000 written to the interception log, exactly the 10000
+newest records are retained and all older records are discarded.
+
+**Validates: Requirements 8.7**
+
+### Property 6: Idempotent (last-write-wins) config replace
+
+*For any* recognized configuration key and any two values written in sequence, a subsequent
+read returns only the second value.
+
+**Validates: Requirements 3.6**
+
+### Property 7: Push retry is bounded to four attempts
+
+*For any* unreachable or perpetually timing-out push target, a dispatched simulated event
+results in exactly 1 + 3 = 4 recorded attempts, and the failed dispatch is recorded with
+the target, the final status code or timeout indication, and the total attempt count.
+
+**Validates: Requirements 5.7, 5.8**
+
+### Property 8: Config validation is all-or-nothing
+
+*For any* configuration write containing at least one invalid key or value, the entire
+request is rejected, the configuration store is left unchanged, and the returned error
+identifies a rejected key.
+
+**Validates: Requirements 3.2, 1.4**
+
+### Property 9: HTTP 2xx classification of dispatch outcomes
+
+*For any* HTTP status code returned by the push target, the dispatch is treated as
+successful if and only if the status code is in the range 200–299.
+
+**Validates: Requirements 5.2**
+
+### Property 10: Filtered log queries return exactly the matching subset
+
+*For any* set of access-log records and any subset of valid filter parameters, the query
+returns precisely those records for which every supplied filter matches — no matching
+record omitted and no non-matching record included.
+
+**Validates: Requirements 4.4**
+
+### Property 11: Inbound body truncation invariant
+
+*For any* inbound request body, if its size exceeds 64 KB the stored body is exactly the
+first 64 KB with the record marked truncated; otherwise the body is stored in full and not
+marked truncated.
+
+**Validates: Requirements 8.2**
+
+## Testing Strategy
+
+### Dual approach
+
+- **Unit tests (vitest):** specific examples, edge cases, and error conditions — endpoint
+  contract shapes (Req 1.1/1.2), method mismatch (Req 1.6), unknown path (Req 1.5), login
+  validation (Req 2.3), empty results (Req 4.2), no-target simulate (Req 5.5), SPA fallback
+  (Req 7.2), startup mode resolution/abort (Req 9.5/9.6/10.4).
+- **Property tests (fast-check):** the universal properties above, each ≥ 100 iterations.
+- **Integration tests (vitest):** full `.fcgi` round-trips over a live Fastify instance,
+  and push dispatch against a local stub HTTP server (asserting received URL, method,
+  payload, and outcome), latency budgets (Req 1.3, 6.4), and persistence across a
+  simulated restart (Req 8.8, 9.1, 9.2).
+
+### Property test configuration
+
+- Library: **fast-check** with vitest.
+- Minimum **100 iterations** per property.
+- Each property test is tagged with a comment referencing its design property, in the
+  format: `// Feature: controlid-facial-emulator, Property {number}: {property_text}`.
+- Each correctness property is implemented by a **single** property-based test.
+
+### Generators (notes)
+
+- **Config maps (P1, P6, P8):** arbitraries over recognized keys with valid value domains
+  (e.g. `port` as numeric string, `alive_interval` as positive int, `enable_photo_upload`
+  ∈ {0,1}); an "invalid entry injector" for P8 that inserts an unrecognized key or an
+  out-of-domain value.
+- **Monitor targets (P2):** `fc.record({ hostname, port, path })` with hostname from a
+  hostname-like arbitrary, port as `1–65535`, path as a slug arbitrary; assert against the
+  URL captured by a stub server.
+- **Tokens/time (P3):** issue a real token, then sample elapsed offsets around the 3600 s
+  boundary (using fake timers) plus arbitraries of malformed/absent token strings.
+- **Event sequences (P4):** arrays of inbound/outbound record descriptors; assert id/order
+  monotonicity.
+- **Counts (P5):** integers `N` in `(10000, 12000]` to keep runs bounded while exceeding
+  the cap.
+- **Status codes (P9):** `fc.integer({ min: 100, max: 599 })` via a stub returning the
+  generated code.
+- **Records + filters (P10):** arrays of access-log records and a filter subset drawn from
+  their own field values so matches are non-trivial.
+- **Body sizes (P11):** byte lengths straddling 65536 (e.g. `[0, 130000]`).
+
+Push-dispatch property tests use a **local stub server or an injected HTTP client mock** so
+100+ iterations remain fast and hermetic — no real external network calls.
+
+### Out-of-scope for PBT
+
+CI/CD pipeline behavior (Req 11, 12), documentation (Req 13), image size and container
+startup (Req 10.1–10.3, 10.5) are verified by workflow runs, smoke tests, and build-time
+checks rather than property tests, because their behavior does not vary meaningfully with
+generated input.
+
+## Design Decisions and Trade-offs
+
+- **SQLite via Drizzle for zero external dependencies.** Keeps the deliverable a single
+  self-contained container (Req 10) with no companion database service, while still giving
+  a typed schema and real query/filter semantics for `load_objects` (Req 4.4).
+- **In-memory vs file store selects the state mode.** Ephemeral mode uses `:memory:` (or a
+  temp file) so CI runs start clean and discard on stop; persistent mode uses a file on the
+  mounted volume (Req 9.1, 9.2). One schema, two connection strings — no code divergence.
+- **Single port serving API + SPA.** Fastify serves `.fcgi`, `/api`, and the static
+  `/admin` SPA on one port (Req 10.1), simplifying `docker compose` and the README's reach
+  instructions (Req 13.1) at the cost of coupling frontend and backend lifecycles — an
+  acceptable trade for a dev tool.
+- **undici for outbound webhooks.** Chosen for explicit per-request timeout control needed
+  by the 10 s dispatch timeout (Req 5.6) and connection reuse across retries; Node's
+  built-in `fetch` (also undici-based) is an acceptable substitute.
+- **Synthetic `device_id`.** The emulator represents one logical device; `device_id` is a
+  configured/generated synthetic value reused across payloads. **Documented divergence
+  (Req 13.5):** it is not derived from real hardware serial encoding.
+- **Fixed `identifier_id` / simplified biometry.** The emulator does not perform biometric
+  matching; authorized/denied is developer-selected. `identifier_id` defaults to `0` and
+  templates/cards are stubs. **Documented divergences (Req 13.5):** no real template
+  matching; `identifier_id` encoding is simplified; biometry endpoints return
+  structurally-valid synthetic data.
+- **Session tokens are opaque random strings** persisted with issuance/expiry timestamps —
+  faithful to the device's `?session=` scheme without implementing device-specific token
+  internals (a deliberate, documented simplification, Req 13.5).
+- **Interception ordering by `id DESC`.** Insertion-monotonic ids are a robust proxy for
+  newest-first even when ISO-millisecond timestamps tie (Req 8.5).
+
+## Requirements Traceability
+
+| Requirement | Satisfied by (components / sections) |
+|---|---|
+| 1 — Control-iD compatible API surface | FcgiRouter + route handlers; API/Endpoint Specification; Error Handling (400/404/405); Property 8 |
+| 2 — Session & authentication | SessionService; FcgiRouter session middleware; `/login.fcgi`; Property 3; Error Handling (401/400) |
+| 3 — Configuration persistence | ConfigService; `config` data model; `set/get_configuration.fcgi`; Properties 1, 6, 8 |
+| 4 — Mock log & biometry endpoints | ObjectStore/UserRepository; `load_objects`/`user_get_image`; `access_logs` model; Property 10; Error Handling (400) |
+| 5 — Push & webhook dispatch engine | PushEngine; ConfigService.resolvePushTarget; Push/Webhook Payload Catalog; Properties 2, 7, 9; Error Handling |
+| 6 — Simulated access events | SimulationService; ControlPanelApi `/api/simulate/*`; Payload Catalog; Properties 2, 7 |
+| 7 — Web control panel | StaticAssetServer `/admin`; ControlPanelApi; React+Vite (Tech Stack); Interception API |
+| 8 — Interception logging & observability | InterceptionLogger; `interception_log` model; Interception API; Properties 4, 5, 11; Error Handling (8.4) |
+| 9 — Ephemeral & persistent state modes | Bootstrap/StateMode selector; ConfigService defaults; Configuration & Deployment (env vars); Error Handling (9.5/9.6) |
+| 10 — Single-container distribution | Dockerfile multi-stage plan; docker-compose outline; single-port Architecture; Configuration & Deployment |
+| 11 — Continuous integration pipeline | CI workflow (Configuration & Deployment); Testing Strategy |
+| 12 — Continuous delivery & release | CD workflow (Configuration & Deployment) |
+| 13 — Documentation & onboarding | README plan (Configuration & Deployment); Design Decisions documented divergences (13.5); API/Endpoint Specification (endpoint list, 13.3) |
