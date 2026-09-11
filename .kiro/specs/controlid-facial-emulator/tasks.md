@@ -20,7 +20,7 @@ individually committable.
 ## Tasks
 
 - [ ] 1. Scaffold monorepo, tooling, and shared types
-  - [ ] 1.1 Create root and `api/` project scaffolding and tooling
+  - [~] 1.1 Create root and `api/` project scaffolding and tooling
     - Create the monorepo layout (`api/`, `web/`, root), root `.gitignore`, root
       `package.json` with workspaces (or npm/pnpm workspace config)
     - In `api/`: `tsconfig.json` (strict), ESLint config, Prettier, and `vitest.config.ts`;
@@ -30,7 +30,7 @@ individually committable.
     - _Traceability: enables Req 11 (lint+test scripts), Req 10 (build), foundation for all
       services. Design: Technology Stack and Rationale, Architecture (monorepo)_
 
-  - [ ] 1.2 Define shared Control-iD payload/types module
+  - [~] 1.2 Define shared Control-iD payload/types module
     - Create a `types`/`shared` module in `api/` with TypeScript types for the grounded
       payload shapes: `MonitorConfig`, `UserRecord`/`AccessLogRecord`, session token,
       `PushOutcome`, `InterceptionRecord`, and the `.fcgi` request/response shapes and the
@@ -40,7 +40,7 @@ individually committable.
       Webhook Payload Catalog_
 
 - [ ] 2. Database schema and connection layer
-  - [ ] 2.1 Implement Drizzle schema and DB connection factory
+  - [~] 2.1 Implement Drizzle schema and DB connection factory
     - Create `db/schema.ts` with `config`, `users`, `access_logs`, `sessions`, and
       `interception_log` tables exactly as in the Data Models section
     - Create a connection factory that opens either `:memory:` (ephemeral) or a file path
@@ -53,7 +53,7 @@ individually committable.
     - _Traceability: Req 9.1, 9.2; Design: Data Models_
 
 - [ ] 3. Bootstrap and state-mode selection
-  - [ ] 3.1 Implement Bootstrap / StateMode selector
+  - [~] 3.1 Implement Bootstrap / StateMode selector
     - Implement `resolveMode(env)` (persistent|ephemeral, default ephemeral + warning on
       unset/unknown), `openStore(mode)`, `ensureVolumeWritable(path)` (abort with non-zero
       exit + message when persistent volume missing/unwritable), and `initDefaultsIfEmpty`
@@ -70,7 +70,7 @@ individually committable.
     - _Traceability: Req 9.3, 9.5, 9.6, 10.4; Design: Error Handling table_
 
 - [ ] 4. ConfigService (configuration persistence)
-  - [ ] 4.1 Implement ConfigService with defaults, validation, and target resolution
+  - [~] 4.1 Implement ConfigService with defaults, validation, and target resolution
     - Implement `get(module, keys?)` filling documented defaults for unset keys, `set(patch)`
       as all-or-nothing with `ValidationError` naming the rejected key, `getDefaults()`, and
       `resolvePushTarget()` composing `http://<hostname>:<port>/<path>` (or `null` when unset)
@@ -96,7 +96,7 @@ individually committable.
     - _Traceability: Req 3.2, 1.4; Design: Property 8_
 
 - [ ] 5. SessionService
-  - [ ] 5.1 Implement SessionService
+  - [~] 5.1 Implement SessionService
     - Implement `issue()` (URL-safe random token, persisted with issuedAt/expiresAt =
       issuedAt + 3600 s) and `validate(token)` returning `valid|expired|invalid` against the
       3600 s TTL
@@ -110,7 +110,7 @@ individually committable.
     - _Traceability: Req 2.4, 2.5; Design: Property 3_
 
 - [ ] 6. ObjectStore / UserRepository (log & biometry data)
-  - [ ] 6.1 Implement ObjectStore and UserRepository
+  - [~] 6.1 Implement ObjectStore and UserRepository
     - Implement `create/load/modify/destroy` over the object model with filter-based `load`,
       and `UserRepository.list()`, `getImage()`, `appendAccessLog()`; validate filter params
       and signal unrecognized/invalid filters
@@ -128,7 +128,7 @@ individually committable.
     - _Traceability: Req 4.2, 4.3, 4.5; Design: Error Handling table_
 
 - [ ] 7. InterceptionLogger
-  - [ ] 7.1 Implement InterceptionLogger
+  - [~] 7.1 Implement InterceptionLogger
     - Implement `recordInbound`/`recordOutbound` (ISO 8601 UTC ms timestamps), 64 KB body
       truncation with `truncated=true`, `query(limit?)` ordered `id DESC` (newest-first),
       and capacity enforcement discarding oldest beyond 10,000
@@ -153,11 +153,11 @@ individually committable.
       `// Feature: controlid-facial-emulator, Property 11`; ≥ 100 iterations
     - _Traceability: Req 8.2; Design: Property 11_
 
-- [ ] 8. Checkpoint — data + core services
+- [~] 8. Checkpoint — data + core services
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. PushEngine (webhook dispatch)
-  - [ ] 9.1 Implement PushEngine with timeout and retry policy
+  - [~] 9.1 Implement PushEngine with timeout and retry policy
     - Implement `resolvePushTarget(endpoint)` composing the final URL, and `dispatch()` using
       undici with a 10 s per-request timeout, up to 3 retries at fixed 5 s intervals (max 4
       attempts), treating only 2xx as success; return a `PushOutcome`; record `no_target` and
@@ -189,7 +189,7 @@ individually committable.
     - _Traceability: Req 5.5; Design: Error Handling table_
 
 - [ ] 10. SimulationService
-  - [ ] 10.1 Implement SimulationService
+  - [~] 10.1 Implement SimulationService
     - Implement `simulateAuthorized(userId)` (event 7 `dao` payload incl. identity, appends
       an `access_logs` record), `simulateDenied()` (event 6 `dao`), `forceKeepAlive()`
       (`device_is_alive`); reject authorized-without-identity so no webhook is dispatched;
@@ -203,7 +203,7 @@ individually committable.
     - _Traceability: Req 6.1, 6.2, 6.3, 6.5, 6.6; Design: SimulationService, Error Handling_
 
 - [ ] 11. Composition root and inbound interception tap
-  - [ ] 11.1 Wire dependency-injection composition root and Fastify instance
+  - [~] 11.1 Wire dependency-injection composition root and Fastify instance
     - Build a bootstrap/composition module that instantiates DB, ConfigService, SessionService,
       ObjectStore/UserRepository, InterceptionLogger, PushEngine, SimulationService and creates
       the Fastify app; add a global inbound hook tapping `InterceptionLogger.recordInbound`;
@@ -215,25 +215,25 @@ individually committable.
     - _Traceability: Req 8.1; Design: Architecture_
 
 - [ ] 12. FcgiRouter and `.fcgi` route handlers
-  - [ ] 12.1 Implement session middleware and login/session routes
+  - [~] 12.1 Implement session middleware and login/session routes
     - Register `/login.fcgi` (credential check → token or 401; 400 on missing username/
       password naming the field) and `/session_is_valid.fcgi`; implement session middleware
       that short-circuits protected routes to 401 on absent/empty/malformed/expired token
     - _Traceability: Req 2.1, 2.2, 2.3, 2.4, 2.5; Design: FcgiRouter, SessionService_
 
-  - [ ] 12.2 Implement configuration `.fcgi` routes
+  - [~] 12.2 Implement configuration `.fcgi` routes
     - Register `/set_configuration.fcgi` and `/get_configuration.fcgi` (protected) delegating
       to ConfigService with all-or-nothing validation and defaults
     - _Traceability: Req 3.1–3.6; Design: FcgiRouter, ConfigService_
 
-  - [ ] 12.3 Implement object/log/biometry `.fcgi` routes
+  - [~] 12.3 Implement object/log/biometry `.fcgi` routes
     - Register `/create_objects.fcgi`, `/load_objects.fcgi`, `/modify_objects.fcgi`,
       `/destroy_objects.fcgi`, `/user_get_image.fcgi`, and `/new_user_identified.fcgi` with
       exact request/response shapes and Content-Type `application/json` (octet-stream for
       images)
     - _Traceability: Req 1.1, 1.2, 4.1–4.5; Design: API/Endpoint Specification_
 
-  - [ ] 12.4 Implement global error, 404, and 405 handling
+  - [~] 12.4 Implement global error, 404, and 405 handling
     - JSON Schema validation → 400 + `error-description` and no state change; unknown path →
       404 + `error-description`; wrong method → 405; ensure `Content-Type: application/json`
       and the 200-within-500ms behavior for valid requests
@@ -246,7 +246,7 @@ individually committable.
     - _Traceability: Req 1.1–1.6, 2.1–2.3; Design: Testing Strategy_
 
 - [ ] 13. Control Panel and Interception APIs
-  - [ ] 13.1 Implement Control Panel and Interception API routes
+  - [~] 13.1 Implement Control Panel and Interception API routes
     - Register `GET /api/identities`, `POST /api/simulate/authorized|denied|keep-alive`
       (400 when `userId` missing for authorized), and `GET /api/interception?limit=`
       (newest-first, empty array when none); error bodies carry a message that lets the panel
@@ -259,7 +259,7 @@ individually committable.
     - _Traceability: Req 6.1, 6.6, 8.5, 8.6; Design: ControlPanelApi_
 
 - [ ] 14. Static asset serving and main entrypoint
-  - [ ] 14.1 Implement StaticAssetServer and `main.ts` entrypoint
+  - [~] 14.1 Implement StaticAssetServer and `main.ts` entrypoint
     - Serve the built SPA at `/admin` with `index.html` fallback for unknown sub-paths; wire
       `main.ts` to run Bootstrap then bind the single `EMULATOR_PORT` after mode is applied
     - _Traceability: Req 7.1, 7.2, 9.4, 10.1; Design: StaticAssetServer, Bootstrap_
@@ -268,23 +268,23 @@ individually committable.
     - `/admin` serves the app; unknown `/admin/*` path returns the SPA entry point
     - _Traceability: Req 7.1, 7.2; Design: StaticAssetServer_
 
-- [ ] 15. Checkpoint — full API surface
+- [~] 15. Checkpoint — full API surface
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 16. React + Vite control panel (`web/`)
-  - [ ] 16.1 Scaffold the `web/` React + Vite app and API client
+  - [~] 16.1 Scaffold the `web/` React + Vite app and API client
     - Create `web/` with Vite, TypeScript, ESLint; add an API client for `/api/identities`,
       `/api/simulate/*`, and `/api/interception`; configure the build to output the static
       assets served at `/admin`
     - _Traceability: Req 7 (Tech Stack), 7.6; Design: Frontend (React + Vite)_
 
-  - [ ] 16.2 Implement event controls with identity selection
+  - [~] 16.2 Implement event controls with identity selection
     - Build controls for authorized (with identity picker listing ≥ 1 identity, requiring a
       selection before activation), denied, and keep-alive; send the corresponding request on
       activation and display the returned outcome within budget
     - _Traceability: Req 7.3, 7.4, 7.5, 7.6, 7.7; Design: ControlPanelApi_
 
-  - [ ] 16.3 Implement error handling and Interception Log view
+  - [~] 16.3 Implement error handling and Interception Log view
     - On error/failed request, show a visible message and retain selections without
       resubmitting; render the interception log newest-first with an explicit empty-state
     - _Traceability: Req 7.8, 8.5, 8.6; Design: ControlPanelApi, Interception API_
@@ -295,7 +295,7 @@ individually committable.
     - _Traceability: Req 7.3, 7.8, 8.6; Design: Testing Strategy_
 
 - [ ] 17. Docker packaging
-  - [ ] 17.1 Write multi-stage Dockerfile and docker-compose.yml
+  - [~] 17.1 Write multi-stage Dockerfile and docker-compose.yml
     - Multi-stage build: web build → api build (tsc + prune dev deps) → `node:alpine` runner
       copying compiled API + static assets + prod deps; `EXPOSE 8080`; `CMD node dist/main.js`;
       add `docker-compose.yml` mapping host:container port with a persistent-mode volume
@@ -307,13 +307,13 @@ individually committable.
     - _Traceability: Req 10.2, 10.3; Design: Out-of-scope for PBT_
 
 - [ ] 18. CI/CD workflows (verification-only, not PBT)
-  - [ ] 18.1 Add GitHub Actions CI workflow
+  - [~] 18.1 Add GitHub Actions CI workflow
     - On push to `main` and PR (opened/synchronize/reopened): checkout → install → lint →
       test (vitest incl. property tests); lint/test failure fails and records the step;
       all-green succeeds; 15-minute job timeout
     - _Traceability: Req 11.1–11.6; Design: CI workflow_
 
-  - [ ] 18.2 Add GitHub Actions CD workflow
+  - [~] 18.2 Add GitHub Actions CD workflow
     - Trigger on tags `v[0-9]+.[0-9]+.[0-9]+` (non-matching tags do nothing); buildx build →
       on failure stop without publishing → push Docker Hub `<version>` (v stripped) + `latest`
       → on publish failure fail and skip release → create GitHub release named with the tag
@@ -321,14 +321,14 @@ individually committable.
     - _Traceability: Req 12.1–12.7; Design: CD workflow_
 
 - [ ] 19. README and documentation (verification-only, not PBT)
-  - [ ] 19.1 Write root README
+  - [~] 19.1 Write root README
     - Document the run command, API and Control Panel address/port; state-mode option name,
       accepted values, and default; list every supported `.fcgi` endpoint by path + method
       referencing the Official API Documentation; a verification step (successful API
       response); and each documented divergence from reference behavior
     - _Traceability: Req 13.1–13.5; Design: Design Decisions (documented divergences)_
 
-- [ ] 20. Final checkpoint — full build, tests, and image
+- [~] 20. Final checkpoint — full build, tests, and image
   - Ensure all tests pass, the image builds under budget, and CI is green; ask the user if
     questions arise.
 
