@@ -22,7 +22,7 @@ selection is required.
 
 ## Tasks
 
-- [ ] 1. Data model: schema additions, idempotent DDL, and inferred types
+- [x] 1. Data model: schema additions, idempotent DDL, and inferred types
   - [x] 1.1 Add new Drizzle tables to `api/src/db/schema.ts`
     - Add `groups`, `usersGroups`, `portals`, `timeZones`, `timeRanges`, `accessRules`,
       `accessRuleGroups`, `accessRuleTimeZones`, `accessRulePortals` exactly as in the
@@ -49,7 +49,7 @@ selection is required.
       the additive schema/DDL changes leave existing behavior intact.
     - _Requirements: 12.5, 14.5_ · _Design: Testing Strategy → Regression_
 
-- [ ] 2. Shared validation module and domain errors
+- [x] 2. Shared validation module and domain errors
   - [x] 2.1 Add `NotFoundError` (404) and `ConflictError` (409) to `api/src/routes/errors.ts`
     - Add both `HttpError` subclasses (setting `name` and `Object.setPrototypeOf`) next to
       `BadRequestError`/`UnauthorizedError`, and add `case 'NotFoundError':` and
@@ -74,7 +74,7 @@ selection is required.
       `error-description`.
     - _Requirements: 14.1_ · _Design: Testing Strategy → Unit_
 
-- [ ] 3. PhotoStorage abstraction
+- [x] 3. PhotoStorage abstraction
   - [x] 3.1 Implement `api/src/repositories/photo-storage.ts`
     - Implement the `PhotoStorage` interface (`save`/`read`/`delete`) and `StoredPhoto`/
       `PhotoMime` types over Node `fs`. Resolve the root from `EMULATOR_DATA_DIR` else
@@ -90,7 +90,7 @@ selection is required.
       dir.
     - _Requirements: 3.1, 3.5, 3.6, 14.1_ · _Design: Testing Strategy → Unit_
 
-- [ ] 4. Admin repositories (typed reads/writes over DrizzleDb)
+- [x] 4. Admin repositories (typed reads/writes over DrizzleDb)
   - [x] 4.1 Extend `api/src/repositories/user-repository.ts` for admin CRUD + photo
     - Keep `list()`/`appendAccessLog()`/`getBiometry()` unchanged. Upgrade `getImage` and add
       `getImageWithMime(userId)` to delegate to `PhotoStorage.read` (inject `PhotoStorage`).
@@ -136,7 +136,7 @@ selection is required.
       encode/decode on time ranges, and access-log filter/ordering over an ephemeral DB.
     - _Requirements: 14.1_ · _Design: Testing Strategy → Unit_
 
-- [ ] 5. Admin services (validation + referential integrity)
+- [x] 5. Admin services (validation + referential integrity)
   - [x] 5.1 Create `api/src/services/user-admin-service.ts`
     - `UserAdminService`: registration 1–64 and name 1–128 validation via `validation.ts`,
       PIN→`password`, submitted `groupIds` existence check (400 naming the id), `NotFoundError`
@@ -204,7 +204,7 @@ selection is required.
       `// Feature: admin-management-panel, Property 3`.
     - _Requirements: 4.6, 2.8_ · _Design: Correctness Properties → Property 3_
 
-- [ ] 6. Container wiring and config plumbing
+- [x] 6. Container wiring and config plumbing
   - [x] 6.1 Add `dataDir` to `ResolvedConfig` in `api/src/composition/bootstrap.ts`
     - Derive a new `dataDir` field from `EMULATOR_DATA_DIR` else `dirname(dbPath)` in
       `resolveConfig`; update `TEST_RESOLVED` in `routes/test-helpers.ts` accordingly.
@@ -218,7 +218,7 @@ selection is required.
       `BuildContainerOverrides` for in-memory test injection.
     - _Requirements: 13.2, 3.1, 1.1_ · _Design: Container wiring_
 
-- [ ] 7. Admin route registration and per-entity endpoints
+- [x] 7. Admin route registration and per-entity endpoints
   - [x] 7.1 Create `api/src/routes/admin/admin-routes.ts` shell + multipart + wiring
     - Implement `registerAdminRoutes(app, container, requireSession)`; register
       `@fastify/multipart` scoped here with `limits: { fileSize: 5*1024*1024, files: 1 }`; add
@@ -264,7 +264,7 @@ selection is required.
       delegating to `container.accessRules`; 201/200; 400/401/404 per the spec.
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.8_ · _Design: Endpoint Specification → Access Rules_
 
-- [ ] 8. Serve stored photos via the existing `user_get_image.fcgi`
+- [x] 8. Serve stored photos via the existing `user_get_image.fcgi`
   - [x] 8.1 Upgrade the image handler in `api/src/routes/fcgi/object-routes.ts`
     - Have the existing `userGetImageHandler` obtain bytes + mime via
       `container.users.getImageWithMime` and set the reply content type to the stored mime
@@ -272,7 +272,7 @@ selection is required.
       + `error-description` when no photo is stored, and keep the route shape/auth unchanged.
     - _Requirements: 3.5, 12.1_ · _Design: Photo Upload & Retrieval → Retrieval_
 
-- [ ] 9. Access Logs and Dashboard endpoints
+- [x] 9. Access Logs and Dashboard endpoints
   - [x] 9.1 Implement Access Logs route
     - `GET /api/admin/access-logs?user_id=&event=&from=&to=` (all optional; accepts ISO date
       or epoch) → 200 newest-first `AccessLogRecord[]`, `[]` when none; 400 naming the invalid
@@ -297,7 +297,7 @@ selection is required.
 - [x] 10. Checkpoint — backend complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Frontend: hash router + navigation shell
+- [x] 11. Frontend: hash router + navigation shell
   - [x] 11.1 Add `useHashRoute` hook and nav shell in `web/src/App.tsx`
     - Add a `useHashRoute` hook over `window.location.hash` with routes `#/dashboard`,
       `#/users`, `#/groups`, `#/time-zones`, `#/access-rules`, `#/portals`, `#/access-logs`,
@@ -321,7 +321,7 @@ selection is required.
       breakpoint; wide tables scroll within their own container.
     - _Requirements: 11.6_ · _Design: Frontend → Responsiveness_
 
-- [ ] 12. Frontend sections (one at a time)
+- [x] 12. Frontend sections (one at a time)
   - [x] 12.1 Portals section (`web/src/components/PortalsSection.tsx` + `PortalForm.tsx`)
     - List/create/edit/delete over `adminPortals`; show `ErrorBanner` on `ApiError` without
       clearing the form.
@@ -364,15 +364,15 @@ selection is required.
       `EventControls`/`InterceptionLog` component tests still pass unchanged.
     - _Requirements: 11.5, 12.3, 12.4, 12.5, 14.5_ · _Design: Frontend → Preserved sections; Testing Strategy_
 
-- [ ] 13. Packaging, data dir, and documentation
-  - [ ]* 13.1 Verify Docker data-dir and image budget
+- [x] 13. Packaging, data dir, and documentation
+  - [x]* 13.1 Verify Docker data-dir and image budget
     - Confirm the multi-stage `Dockerfile` builds `web/` into `web/dist`, the container serves
       one port, the photos data dir sits under the persistent volume (`EMULATOR_DATA_DIR` /
       `dirname(EMULATOR_DB_PATH)`), and the final image stays < 200 MB with only
       `@fastify/multipart` added.
     - _Requirements: 13.1, 13.3, 13.5_ · _Design: Design Decisions → Image size budget; Persistence_
 
-  - [ ] 13.2 Update `README.md` with panel usage and documented divergences
+  - [x] 13.2 Update `README.md` with panel usage and documented divergences
     - Document the Admin Panel sections and `/api/admin` surface; and explicitly state: no
       biometric matching (photos stored/displayed/retrieved only), access outcomes come from
       Simulate + stored records not physical sensing, Time Zones/Access Rules/Groups/Portals are
@@ -380,21 +380,21 @@ selection is required.
       (`users`/`groups`/`portals`/`access_rules`/`time_zones`).
     - _Requirements: 15.1, 15.2, 15.3, 15.4_ · _Design: Fidelity Anchor; Requirements Traceability (15)_
 
-  - [ ]* 13.3 Verify CI runs lint + full suite including new tests
+  - [x]* 13.3 Verify CI runs lint + full suite including new tests
     - Confirm `.github/workflows/ci.yml` runs the linter and the full vitest suite (existing +
       new) on push/PR to `main`; no workflow change expected unless the web test step is
       missing.
     - _Requirements: 13.4_ · _Design: Testing Strategy → Regression / CI_
 
-- [ ] 14. Regression — existing emulator suite passes unchanged
-  - [ ]* 14.1 Run the full existing test suite and confirm no regressions
+- [x] 14. Regression — existing emulator suite passes unchanged
+  - [x]* 14.1 Run the full existing test suite and confirm no regressions
     - Run the entire existing suite (`composition/*.test.ts`, `repositories/*.test.ts`,
       `services/*.test.ts`, `routes/**/*.integration.test.ts`, `web/src/**/*.test.tsx`) plus the
       new tests and confirm every existing `.fcgi` route, the Push Engine, the Interception Log,
       and the Simulate section behave unchanged.
     - _Requirements: 12.1, 12.2, 12.5, 14.5_ · _Design: Testing Strategy → Regression_
 
-- [ ] 15. Final checkpoint — ensure all tests pass
+- [x] 15. Final checkpoint — ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
