@@ -20,7 +20,7 @@ individually committable.
 ## Tasks
 
 - [ ] 1. Scaffold monorepo, tooling, and shared types
-  - [~] 1.1 Create root and `api/` project scaffolding and tooling
+  - [x] 1.1 Create root and `api/` project scaffolding and tooling
     - Create the monorepo layout (`api/`, `web/`, root), root `.gitignore`, root
       `package.json` with workspaces (or npm/pnpm workspace config)
     - In `api/`: `tsconfig.json` (strict), ESLint config, Prettier, and `vitest.config.ts`;
