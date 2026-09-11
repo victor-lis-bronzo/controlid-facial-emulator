@@ -125,3 +125,223 @@ POST to the client's Monitor server.
   grounded payload → PushEngine.resolvePushTarget (from ConfigService) → POST to target
   with timeout/retry → InterceptionLogger.recordOutbound → outcome returned to panel.
 
+## Technology Stack and Rationale
+
+| Concern | Choice | Rationale |
+|---|---|---|
+| Runtime / language | Node.js + TypeScript | Matches the intended stack; static types make the many grounded payload shapes self-documenting and safe to refactor. |
+| HTTP framework | Fastify | Fast, schema-first (JSON Schema validation feeds Req 1.4/2.3/4.5 error handling), first-class static-file and hook support for the interception tap. |
+| Persistence | SQLite via Drizzle ORM | Zero external dependencies keeps the image single-container and small (Req 10). Drizzle gives typed schema + migrations. Same schema serves file mode (persistent) and `:memory:` (ephemeral). |
+| Frontend | React + Vite | Vite produces a static SPA build served from `/admin` (Req 7); fast DX. |
+| Outbound HTTP | undici (Node's built-in `fetch` acceptable) | undici exposes explicit per-request timeout control (needed for the 10 s dispatch timeout, Req 5.6) and connection reuse. |
+| Testing | vitest + fast-check | vitest for unit/integration; fast-check for property-based testing of the correctness properties. |
+| Packaging | Docker multi-stage, `node:alpine` runner | Web build → API build → slim Alpine runner < 200 MB (Req 10.2). |
+| CI/CD | GitHub Actions | Lint+test on push/PR (Req 11); semver-tag build/publish/release (Req 12). |
+
+## Components and Interfaces
+
+All interfaces are TypeScript. Types are illustrative signatures, not final implementation.
+
+### FcgiRouter and route handlers
+
+Registers every supported `.fcgi` route with its exact path, method, and request schema;
+applies the session middleware to protected routes; produces documentation-shaped JSON.
+
+```typescript
+interface FcgiRouteContext {
+  session?: SessionToken;      // populated by session middleware for protected routes
+  deviceId: number;            // configured/synthetic device id
+  logger: InterceptionLogger;
+}
+
+interface FcgiHandler<Req = unknown, Res = unknown> {
+  path: `${string}.fcgi`;
+  method: 'POST' | 'GET';
+  protected: boolean;          // requires a valid session
+  requestSchema: JSONSchema;   // Fastify JSON Schema -> 400 on violation (Req 1.4)
+  handle(body: Req, ctx: FcgiRouteContext): Promise<Res>;
+}
+
+// Handlers: login, sessionIsValid, setConfiguration, getConfiguration,
+// createObjects, loadObjects, modifyObjects, destroyObjects, userGetImage,
+// newUserIdentified
+```
+
+The router registers a `404` handler for unknown paths (Req 1.5) and Fastify's method
+mismatch yields `405` (Req 1.6). Session validation failures short-circuit to `401`
+(Req 2.5).
+
+### SessionService
+
+Issues opaque tokens on successful login and validates them against a 3600 s TTL.
+
+```typescript
+interface SessionToken { token: string; issuedAt: number; expiresAt: number; }
+
+interface SessionService {
+  issue(): Promise<SessionToken>;                 // token = URL-safe random string
+  validate(token: string | undefined): Promise<'valid' | 'expired' | 'invalid'>;
+  readonly ttlSeconds: 3600;
+}
+```
+
+### ConfigService
+
+Reads/writes nested configuration modules (e.g. the `monitor` block) with defaults and
+validation, and resolves the Push Target from the monitor block.
+
+```typescript
+interface MonitorConfig {
+  request_timeout: string; hostname: string; port: string; path: string;
+  alive_interval: number; enable_photo_upload: 0 | 1;
+}
+
+interface ConfigService {
+  get(module: string, keys?: string[]): Promise<Record<string, unknown>>; // fills defaults (Req 3.4)
+  set(patch: Record<string, Record<string, unknown>>): Promise<void>;     // all-or-nothing (Req 3.2)
+  resolvePushTarget(): Promise<string | null>; // `${hostname}:${port}/${path}` or null (Req 5.1/5.5)
+  getDefaults(): Record<string, Record<string, unknown>>;
+}
+```
+
+`set` validates every key/value first; if any fails, it throws a `ValidationError`
+identifying the rejected key and writes nothing (Req 3.2, 3.6 replace semantics).
+
+### ObjectStore / UserRepository
+
+CRUD over the Control-iD object model (`users`, `access_logs`, plus stubs for
+`cards`/`templates`/`groups`/`portals` as needed) via Drizzle.
+
+```typescript
+interface ObjectStore {
+  create(object: string, values: Record<string, unknown>[]): Promise<{ ids: number[] }>;
+  load(object: string, filters?: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+  modify(object: string, values: Record<string, unknown>, where: Record<string, unknown>): Promise<{ changes: number }>;
+  destroy(object: string, where: Record<string, unknown>): Promise<{ changes: number }>;
+}
+
+interface UserRepository {
+  list(): Promise<UserRecord[]>;                 // feeds Control Panel identity picker (Req 7.3)
+  getImage(userId: number): Promise<Buffer | null>;
+  appendAccessLog(entry: AccessLogInsert): Promise<AccessLogRecord>;
+}
+```
+
+### PushEngine
+
+Dispatches webhooks with the timeout/retry policy and reports outcomes.
+
+```typescript
+interface PushOutcome {
+  success: boolean;
+  target: string | null;
+  statusCode?: number;
+  timedOut?: boolean;
+  attempts: number;              // 1 + retries
+  failureCategory?: 'no_target' | 'timeout' | 'unreachable' | 'http_error';
+}
+
+interface PushEngine {
+  resolvePushTarget(endpoint: string): Promise<string | null>; // composes final URL
+  dispatch(endpoint: string, payload: unknown): Promise<PushOutcome>;
+  readonly timeoutMs: 10_000;    // Req 5.6
+  readonly maxRetries: 3;        // Req 5.7  -> up to 4 attempts total
+  readonly retryIntervalMs: 5_000;
+}
+```
+
+If `resolvePushTarget` returns `null`, `dispatch` records `no_target` and performs no POST
+(Req 5.5). Success is any `2xx` (Req 5.2). After exhausting attempts, the failed dispatch
+is recorded with target, final status/timeout, and total attempts (Req 5.8).
+
+### SimulationService
+
+Builds correctly grounded payloads for each simulated event and delegates to the
+PushEngine.
+
+```typescript
+interface SimulationService {
+  simulateAuthorized(userId: number): Promise<PushOutcome>;  // event=7 dao (Req 6.1)
+  simulateDenied(): Promise<PushOutcome>;                     // event=6 dao (Req 6.2)
+  forceKeepAlive(): Promise<PushOutcome>;                     // device_is_alive (Req 6.3)
+}
+```
+
+`simulateAuthorized` rejects with a domain error when `userId` is absent/unknown, so no
+webhook is dispatched (Req 6.6). Each call also appends an `access_logs` record so that
+subsequent `load_objects` queries reflect the event (Req 4.1).
+
+### InterceptionLogger
+
+Records inbound and outbound activity, enforces truncation and cap, and serves
+newest-first queries.
+
+```typescript
+interface InterceptionRecord {
+  id: number;
+  direction: 'inbound' | 'outbound';
+  method: string;
+  path: string;                  // inbound path or outbound target URL
+  timestamp: string;             // ISO 8601 UTC, millisecond precision
+  body: string;
+  truncated: boolean;            // Req 8.2 (> 64 KB)
+  outcome?: 'success' | 'failure' | 'no_target';
+  statusCode?: number;
+  attempts?: number;
+  failureCategory?: string;
+}
+
+interface InterceptionLogger {
+  recordInbound(r: Omit<InterceptionRecord,'id'|'direction'>): Promise<void>;
+  recordOutbound(r: Omit<InterceptionRecord,'id'|'direction'>): Promise<void>;
+  query(limit?: number): Promise<InterceptionRecord[]>;       // newest-first (Req 8.5)
+  readonly maxBodyBytes: 65_536; // 64 KB
+  readonly capacity: 10_000;     // Req 8.7
+}
+```
+
+Writes over 64 KB store the first 64 KB and set `truncated=true`. After each write, if the
+row count exceeds `capacity`, the oldest rows are deleted to retain exactly 10,000
+(Req 8.7).
+
+### ControlPanelApi
+
+The `/api` surface the React app calls. These are the emulator's own control endpoints,
+distinct from the `.fcgi` compatibility surface.
+
+```typescript
+// GET  /api/identities            -> UserRecord[]   (Req 7.3)
+// POST /api/simulate/authorized   { userId } -> PushOutcome (Req 6.1)
+// POST /api/simulate/denied       {}         -> PushOutcome (Req 6.2)
+// POST /api/simulate/keep-alive   {}         -> PushOutcome (Req 6.3)
+// GET  /api/interception?limit=   -> InterceptionRecord[]   (Req 8.5)
+```
+
+Error responses carry a message the panel can surface without losing the developer's
+selection (Req 6.5, 7.8).
+
+### StaticAssetServer
+
+Serves the built SPA at `/admin` and falls back to `index.html` for unknown sub-paths so
+client-side routing resolves (Req 7.1, 7.2).
+
+### Bootstrap / StateMode selector
+
+Selects ephemeral vs persistent storage from the environment, verifies the persistent
+volume, initializes defaults, then binds the port.
+
+```typescript
+type StateMode = 'ephemeral' | 'persistent';
+
+interface Bootstrap {
+  resolveMode(env: NodeJS.ProcessEnv): { mode: StateMode; warning?: string }; // Req 9.6 default+warn
+  openStore(mode: StateMode): Promise<DrizzleDb>; // :memory: or file on volume
+  ensureVolumeWritable(path: string): Promise<void>; // Req 9.5 abort if missing
+  initDefaultsIfEmpty(cfg: ConfigService): Promise<void>; // Req 9.3
+}
+```
+
+Persistent mode with an unwritable/absent volume aborts startup with a non-zero exit and a
+clear message, without listening (Req 9.5, 10.4). An unrecognized/absent mode defaults to
+ephemeral and emits a warning (Req 9.6).
+
