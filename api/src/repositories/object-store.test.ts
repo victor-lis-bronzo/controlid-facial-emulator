@@ -11,6 +11,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDb, type DrizzleDb } from '../db/connection.js';
 import { ObjectStore } from './object-store.js';
 import { UserRepository } from './user-repository.js';
+import { InMemoryPhotoStorage } from './photo-storage-memory.js';
 import { ValidationError } from './errors.js';
 
 describe('ObjectStore', () => {
@@ -134,7 +135,7 @@ describe('UserRepository', () => {
 
   beforeEach(() => {
     db = createDb({ mode: 'ephemeral' });
-    repo = new UserRepository(db);
+    repo = new UserRepository(db, new InMemoryPhotoStorage());
   });
 
   afterEach(() => {
