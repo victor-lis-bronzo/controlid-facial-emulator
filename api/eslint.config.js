@@ -23,6 +23,7 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         fetch: 'readonly',
+        AbortController: 'readonly',
       },
     },
     plugins: {
