@@ -1,0 +1,55 @@
+# Keep the build context small and reproducible: exclude installed deps and
+# build artifacts (the Dockerfile stages install/build fresh), plus anything
+# not needed to build the image. Source under api/ and web/ is intentionally
+# NOT ignored because the build stages compile it.
+
+# Dependencies (reinstalled inside the image)
+node_modules
+**/node_modules
+
+# Build / compiled output (rebuilt inside the image)
+dist
+**/dist
+build
+out
+.vite
+*.tsbuildinfo
+
+# Test coverage
+coverage
+.nyc_output
+
+# Tests and fixtures (not needed at build time)
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+
+# VCS and CI
+.git
+.gitignore
+.github
+
+# Spec / docs / editor
+.kiro
+*.md
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local env and databases
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.db
+
+# Docker meta (not needed in context)
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Scripts (smoke test etc. run from host, not needed in build context)
+scripts
