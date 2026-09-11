@@ -37,6 +37,7 @@ import { registerConfigRoutes } from '../routes/fcgi/config-routes.js';
 import { registerObjectRoutes } from '../routes/fcgi/object-routes.js';
 import { registerControlPanelRoutes } from '../routes/control-panel/control-panel-routes.js';
 import { registerInterceptionRoutes } from '../routes/interception/interception-routes.js';
+import { registerAdminRoutes } from '../routes/admin/admin-routes.js';
 import { registerStaticAssets } from '../routes/static.js';
 
 /** Symbol-free property name used to stash the raw request body for the tap. */
@@ -228,6 +229,15 @@ export async function buildApp(
       });
     }
   }
+
+  // --- Admin API (NEW): /api/admin/* (Req 10, 2–9, 13.2). ---
+  // Registered AFTER the existing route registrations and the .fcgi 405
+  // catch-alls (so those synchronous routes attach before this awaited plugin
+  // registration finalizes the encapsulation context) and BEFORE the awaited
+  // `registerStaticAssets` below — the error/404 handlers installed above still
+  // apply. Reuses the SAME `requireSession` instance the app already built, and
+  // registers `@fastify/multipart` (scoped) for the photo-upload endpoint.
+  await registerAdminRoutes(app, container, requireSession);
 
   // --- SPA static serving at /admin (Req 7.1, 7.2). ---
   // Registered last: `@fastify/static` is an awaited plugin registration, and

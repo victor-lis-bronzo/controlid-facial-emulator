@@ -219,7 +219,7 @@ selection is required.
     - _Requirements: 13.2, 3.1, 1.1_ · _Design: Container wiring_
 
 - [ ] 7. Admin route registration and per-entity endpoints
-  - [ ] 7.1 Create `api/src/routes/admin/admin-routes.ts` shell + multipart + wiring
+  - [x] 7.1 Create `api/src/routes/admin/admin-routes.ts` shell + multipart + wiring
     - Implement `registerAdminRoutes(app, container, requireSession)`; register
       `@fastify/multipart` scoped here with `limits: { fileSize: 5*1024*1024, files: 1 }`; add
       a positive-integer `:id` param guard (400 naming `id`). Call it from `buildApp` AFTER the
@@ -228,13 +228,13 @@ selection is required.
       reads attach none. Add `@fastify/multipart` (`^9`) to `api/package.json`.
     - _Requirements: 10.2, 10.3, 10.4, 13.2, 3.3_ · _Design: Admin route registration; Endpoint Specification_
 
-  - [ ] 7.2 Implement Users routes (JSON CRUD)
+  - [x] 7.2 Implement Users routes (JSON CRUD)
     - `GET/POST /api/admin/users`, `GET/PUT/DELETE /api/admin/users/:id` delegating to
       `container.userAdmin`; 201 on create, 200 on update/delete; 400/401/404 per the spec.
       Thin handlers only.
     - _Requirements: 2.1, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 10.2, 10.3_ · _Design: Endpoint Specification → Users_
 
-  - [ ] 7.3 Implement User photo upload/delete routes (multipart)
+  - [x] 7.3 Implement User photo upload/delete routes (multipart)
     - `POST /api/admin/users/:id/photo` reads the single file part, sniffs magic bytes (JPEG
       `FF D8 FF`, PNG `89 50 4E 47`) in addition to the reported mimetype (400 "Accepted
       formats: JPEG, PNG." on mismatch, no file written), maps the multipart
@@ -243,29 +243,29 @@ selection is required.
       photo → 200.
     - _Requirements: 3.1, 3.2, 3.3, 3.6, 10.2_ · _Design: Photo Upload & Retrieval → Upload/Deletion_
 
-  - [ ] 7.4 Implement Groups routes
+  - [x] 7.4 Implement Groups routes
     - `GET/POST /api/admin/groups`, `GET/PUT/DELETE /api/admin/groups/:id` delegating to
       `container.groups`; 201/200; 400/401/404 and 409 (referenced) per the spec.
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 7.7_ · _Design: Endpoint Specification → Groups_
 
-  - [ ] 7.5 Implement Portals routes
+  - [x] 7.5 Implement Portals routes
     - `GET/POST /api/admin/portals`, `GET/PUT/DELETE /api/admin/portals/:id` delegating to
       `container.portals`; 201/200; 400/401/404/409 per the spec.
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 7.7_ · _Design: Endpoint Specification → Portals_
 
-  - [ ] 7.6 Implement Time Zones routes
+  - [x] 7.6 Implement Time Zones routes
     - `GET/POST /api/admin/time-zones`, `GET/PUT/DELETE /api/admin/time-zones/:id` delegating
       to `container.timeZones`; accepts `{ name, timeRanges: [{ days[], startTime, endTime }] }`;
       201/200; 400/401/404/409 per the spec.
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 7.7_ · _Design: Endpoint Specification → Time Zones_
 
-  - [ ] 7.7 Implement Access Rules routes
+  - [x] 7.7 Implement Access Rules routes
     - `GET/POST /api/admin/access-rules`, `GET/PUT/DELETE /api/admin/access-rules/:id`
       delegating to `container.accessRules`; 201/200; 400/401/404 per the spec.
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.8_ · _Design: Endpoint Specification → Access Rules_
 
 - [ ] 8. Serve stored photos via the existing `user_get_image.fcgi`
-  - [ ] 8.1 Upgrade the image handler in `api/src/routes/fcgi/object-routes.ts`
+  - [x] 8.1 Upgrade the image handler in `api/src/routes/fcgi/object-routes.ts`
     - Have the existing `userGetImageHandler` obtain bytes + mime via
       `container.users.getImageWithMime` and set the reply content type to the stored mime
       (`image/jpeg`/`image/png`) instead of a fixed `application/octet-stream`; keep the 404
@@ -273,18 +273,18 @@ selection is required.
     - _Requirements: 3.5, 12.1_ · _Design: Photo Upload & Retrieval → Retrieval_
 
 - [ ] 9. Access Logs and Dashboard endpoints
-  - [ ] 9.1 Implement Access Logs route
+  - [x] 9.1 Implement Access Logs route
     - `GET /api/admin/access-logs?user_id=&event=&from=&to=` (all optional; accepts ISO date
       or epoch) → 200 newest-first `AccessLogRecord[]`, `[]` when none; 400 naming the invalid
       parameter on a bad filter value. Delegates to `container.accessLogs.query`.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 10.3_ · _Design: Endpoint Specification → Access Logs_
 
-  - [ ] 9.2 Implement Dashboard route
+  - [x] 9.2 Implement Dashboard route
     - `GET /api/admin/dashboard` → `{ counts: { users, groups, accessRules, portals },
       recentLogs }` via `container.dashboard`; open read.
     - _Requirements: 9.1, 9.2, 9.3, 10.3_ · _Design: Endpoint Specification → Dashboard_
 
-  - [ ]* 9.3 Integration tests for admin CRUD, photo round-trip, filters, dashboard, auth
+  - [x]* 9.3 Integration tests for admin CRUD, photo round-trip, filters, dashboard, auth
     - Extend `api/src/routes/test-helpers.ts` with an in-memory `photoStorage` override and a
       `loginSession(app)` helper reusing the existing `login`. Add
       `api/src/routes/admin/admin.integration.test.ts` exercising, per entity, CRUD success
@@ -294,7 +294,7 @@ selection is required.
       when the session is omitted/expired.
     - _Requirements: 14.2, 2.x, 3.1, 3.2, 3.3, 3.5, 4.x, 5.x, 6.x, 7.x, 8.x, 9.x, 10.2_ · _Design: Testing Strategy → Integration_
 
-- [ ] 10. Checkpoint — backend complete
+- [x] 10. Checkpoint — backend complete
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 11. Frontend: hash router + navigation shell
