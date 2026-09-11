@@ -63,6 +63,24 @@ export class UnauthorizedError extends HttpError {
   }
 }
 
+/** Convenience: a `404 Not Found` with an `error-description` (Req 2.6, 4.5, 5.6, 6.4, 7.5). */
+export class NotFoundError extends HttpError {
+  public constructor(description: string) {
+    super(404, description);
+    this.name = 'NotFoundError';
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+/** Convenience: a `409 Conflict` for referential-integrity violations (Req 7.7). */
+export class ConflictError extends HttpError {
+  public constructor(description: string) {
+    super(409, description);
+    this.name = 'ConflictError';
+    Object.setPrototypeOf(this, ConflictError.prototype);
+  }
+}
+
 /** The JSON error body shape returned for every error path. */
 interface ErrorBody {
   'error-description': string;
@@ -118,6 +136,24 @@ function classify(error: unknown): { statusCode: number; description: string } {
           typeof withStatus.statusCode === 'number'
             ? withStatus.statusCode
             : 400;
+        return { statusCode: status, description: error.message };
+      }
+      case 'NotFoundError': {
+        // Carries an explicit statusCode; fall back to 404 if absent.
+        const withStatus = error as Error & { statusCode?: number };
+        const status =
+          typeof withStatus.statusCode === 'number'
+            ? withStatus.statusCode
+            : 404;
+        return { statusCode: status, description: error.message };
+      }
+      case 'ConflictError': {
+        // Carries an explicit statusCode; fall back to 409 if absent.
+        const withStatus = error as Error & { statusCode?: number };
+        const status =
+          typeof withStatus.statusCode === 'number'
+            ? withStatus.statusCode
+            : 409;
         return { statusCode: status, description: error.message };
       }
       // ConfigService and the repository BOTH name their validation error

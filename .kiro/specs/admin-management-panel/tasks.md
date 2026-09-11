@@ -23,7 +23,7 @@ selection is required.
 ## Tasks
 
 - [ ] 1. Data model: schema additions, idempotent DDL, and inferred types
-  - [ ] 1.1 Add new Drizzle tables to `api/src/db/schema.ts`
+  - [x] 1.1 Add new Drizzle tables to `api/src/db/schema.ts`
     - Add `groups`, `usersGroups`, `portals`, `timeZones`, `timeRanges`, `accessRules`,
       `accessRuleGroups`, `accessRuleTimeZones`, `accessRulePortals` exactly as in the
       design (composite PKs via `primaryKey`; FKs via `.references(...)`; `usersGroups` and
@@ -36,7 +36,7 @@ selection is required.
       `interception_log` column.
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7_ · _Design: Data Models → Drizzle schema additions_
 
-  - [ ] 1.2 Append idempotent `CREATE TABLE IF NOT EXISTS` DDL in `api/src/db/connection.ts`
+  - [x] 1.2 Append idempotent `CREATE TABLE IF NOT EXISTS` DDL in `api/src/db/connection.ts`
     - Append the nine new statements to `CREATE_TABLE_STATEMENTS` in parent-before-child
       order (groups, users_groups, portals, time_zones, time_ranges, access_rules,
       access_rule_groups, access_rule_time_zones, access_rule_portals), mirroring the FK/
@@ -44,13 +44,13 @@ selection is required.
       startup before any Admin API request is served.
     - _Requirements: 1.6, 1.1_ · _Design: Data Models → Idempotent DDL additions_
 
-  - [ ]* 1.3 Regression: confirm existing DB/bootstrap tests still pass
+  - [x]* 1.3 Regression: confirm existing DB/bootstrap tests still pass
     - Run the existing `api/src/db/connection.test.ts` and `composition/*.test.ts` to verify
       the additive schema/DDL changes leave existing behavior intact.
     - _Requirements: 12.5, 14.5_ · _Design: Testing Strategy → Regression_
 
 - [ ] 2. Shared validation module and domain errors
-  - [ ] 2.1 Add `NotFoundError` (404) and `ConflictError` (409) to `api/src/routes/errors.ts`
+  - [x] 2.1 Add `NotFoundError` (404) and `ConflictError` (409) to `api/src/routes/errors.ts`
     - Add both `HttpError` subclasses (setting `name` and `Object.setPrototypeOf`) next to
       `BadRequestError`/`UnauthorizedError`, and add `case 'NotFoundError':` and
       `case 'ConflictError':` to the name-based `switch` in `classify()` (reading the carried
@@ -59,7 +59,7 @@ selection is required.
       untouched (it already renders multipart `FST_REQ_FILE_TOO_LARGE` as 413).
     - _Requirements: 7.7, 2.6, 4.5, 5.6, 6.4, 7.5_ · _Design: Domain error additions_
 
-  - [ ] 2.2 Create shared `api/src/services/validation.ts` pure primitives
+  - [x] 2.2 Create shared `api/src/services/validation.ts` pure primitives
     - Implement `validateName(field, value, max)` (non-empty, ≤ max → `BadRequestError`
       naming the field), `parseHhMm(value)` (`HH:MM` 00–23 / 00–59), `WEEKDAYS` (the seven
       names), `daysToMask`/`maskToDays` (7-bit weekday mask, 1..127), and
@@ -67,7 +67,7 @@ selection is required.
       functions only; throw shared domain errors on invalid input.
     - _Requirements: 5.2, 5.3, 5.4, 2.1, 4.2, 6.2, 7.1_ · _Design: shared `validation.ts`_
 
-  - [ ]* 2.3 Unit tests for validation primitives and new errors
+  - [x]* 2.3 Unit tests for validation primitives and new errors
     - Test `validateName` length bounds (1/64, 1/128, empty, over-length), `parseHhMm`
       edges (`00:00`, `23:59`, `24:00`, `12:60`, non-numeric), `daysToMask`/`maskToDays`
       round-trip, and that `NotFoundError`/`ConflictError` classify to 404/409 with an
@@ -75,7 +75,7 @@ selection is required.
     - _Requirements: 14.1_ · _Design: Testing Strategy → Unit_
 
 - [ ] 3. PhotoStorage abstraction
-  - [ ] 3.1 Implement `api/src/repositories/photo-storage.ts`
+  - [x] 3.1 Implement `api/src/repositories/photo-storage.ts`
     - Implement the `PhotoStorage` interface (`save`/`read`/`delete`) and `StoredPhoto`/
       `PhotoMime` types over Node `fs`. Resolve the root from `EMULATOR_DATA_DIR` else
       `dirname(dbPath)` else a temp dir; create the `photos/` subfolder on first write; name
@@ -84,7 +84,7 @@ selection is required.
       processing.
     - _Requirements: 3.1, 3.5, 3.6, 3.7, 3.8, 13.3, 15.1_ · _Design: PhotoStorage_
 
-  - [ ]* 3.2 Unit tests for PhotoStorage
+  - [x]* 3.2 Unit tests for PhotoStorage
     - Test save→read round-trip preserves bytes and mime for JPEG and PNG, re-upload
       overwrites, `delete` is idempotent, and `read` returns null when absent. Use a temp
       dir.

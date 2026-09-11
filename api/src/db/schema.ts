@@ -11,7 +11,7 @@
  *
  * See design.md → "Data Models".
  */
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, primaryKey } from 'drizzle-orm/sqlite-core';
 
 // Configuration stored per module as a JSON blob keyed by module name.
 export const config = sqliteTable('config', {
@@ -61,6 +61,111 @@ export const interceptionLog = sqliteTable('interception_log', {
   failureCategory: text('failure_category'),
 });
 
+// ---------------------------------------------------------------------------
+// Admin Management Panel additions (strictly additive; existing tables above
+// are left untouched — Req 1.5). New tables model Groups, Portals, Time Zones
+// (with Time Ranges), and Access Rules and their associations.
+//
+// Foreign keys are enforced at the DB level (connection.ts sets
+// `PRAGMA foreign_keys = ON`). Owned children (`users_groups`, `time_ranges`,
+// and the `access_rule_*` rows toward the owning Access Rule) use ON DELETE
+// CASCADE. Join columns pointing at Groups/Time Zones/Portals use ON DELETE
+// RESTRICT as a defense-in-depth backstop; the authoritative referential-
+// integrity check (409) runs in the service layer (Req 7.7).
+//
+// See design.md → "Data Models → Drizzle schema additions".
+// ---------------------------------------------------------------------------
+
+// --- Groups (Control-iD `groups`) ---
+export const groups = sqliteTable('groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+});
+
+// User↔Group membership: many-to-many (Req 1.2). Composite PK prevents dup rows.
+export const usersGroups = sqliteTable(
+  'users_groups',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    groupId: integer('group_id')
+      .notNull()
+      .references(() => groups.id, { onDelete: 'cascade' }),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.groupId] }) }),
+);
+
+// --- Portals (Control-iD `portals`; doors) ---
+export const portals = sqliteTable('portals', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+});
+
+// --- Time Zones (Control-iD `time_zones`; horários) ---
+export const timeZones = sqliteTable('time_zones', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+});
+
+// A Time Range belongs to exactly one Time Zone (owned child; cascade on delete).
+// `days` is a 7-bit mask (bit 0 = Sunday … bit 6 = Saturday); start/end are 'HH:MM'.
+export const timeRanges = sqliteTable('time_ranges', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  timeZoneId: integer('time_zone_id')
+    .notNull()
+    .references(() => timeZones.id, { onDelete: 'cascade' }),
+  days: integer('days').notNull(), // 7-bit weekday mask, 1..127
+  startTime: text('start_time').notNull(), // 'HH:MM' 24-hour
+  endTime: text('end_time').notNull(), // 'HH:MM' 24-hour, strictly after startTime
+});
+
+// --- Access Rules (Control-iD `access_rules`) ---
+export const accessRules = sqliteTable('access_rules', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+});
+
+// Access Rule associations: three many-to-many join tables (Req 1.3, 7).
+export const accessRuleGroups = sqliteTable(
+  'access_rule_groups',
+  {
+    accessRuleId: integer('access_rule_id')
+      .notNull()
+      .references(() => accessRules.id, { onDelete: 'cascade' }),
+    groupId: integer('group_id')
+      .notNull()
+      .references(() => groups.id, { onDelete: 'restrict' }),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.accessRuleId, t.groupId] }) }),
+);
+
+export const accessRuleTimeZones = sqliteTable(
+  'access_rule_time_zones',
+  {
+    accessRuleId: integer('access_rule_id')
+      .notNull()
+      .references(() => accessRules.id, { onDelete: 'cascade' }),
+    timeZoneId: integer('time_zone_id')
+      .notNull()
+      .references(() => timeZones.id, { onDelete: 'restrict' }),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.accessRuleId, t.timeZoneId] }) }),
+);
+
+export const accessRulePortals = sqliteTable(
+  'access_rule_portals',
+  {
+    accessRuleId: integer('access_rule_id')
+      .notNull()
+      .references(() => accessRules.id, { onDelete: 'cascade' }),
+    portalId: integer('portal_id')
+      .notNull()
+      .references(() => portals.id, { onDelete: 'restrict' }),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.accessRuleId, t.portalId] }) }),
+);
+
 /**
  * The full schema object, convenient for `drizzle(client, { schema })` and for
  * `db.query.*` typed access.
@@ -71,6 +176,16 @@ export const schema = {
   accessLogs,
   sessions,
   interceptionLog,
+  // Admin Management Panel additions.
+  groups,
+  usersGroups,
+  portals,
+  timeZones,
+  timeRanges,
+  accessRules,
+  accessRuleGroups,
+  accessRuleTimeZones,
+  accessRulePortals,
 };
 
 // --- Inferred row types (source of truth for DB record shapes) ---
@@ -89,3 +204,32 @@ export type SessionInsert = typeof sessions.$inferInsert;
 
 export type InterceptionLogRow = typeof interceptionLog.$inferSelect;
 export type InterceptionLogInsert = typeof interceptionLog.$inferInsert;
+
+// --- Admin Management Panel inferred row/insert types ---
+
+export type GroupRow = typeof groups.$inferSelect;
+export type GroupInsert = typeof groups.$inferInsert;
+
+export type UsersGroupsRow = typeof usersGroups.$inferSelect;
+export type UsersGroupsInsert = typeof usersGroups.$inferInsert;
+
+export type PortalRow = typeof portals.$inferSelect;
+export type PortalInsert = typeof portals.$inferInsert;
+
+export type TimeZoneRow = typeof timeZones.$inferSelect;
+export type TimeZoneInsert = typeof timeZones.$inferInsert;
+
+export type TimeRangeRow = typeof timeRanges.$inferSelect;
+export type TimeRangeInsert = typeof timeRanges.$inferInsert;
+
+export type AccessRuleRow = typeof accessRules.$inferSelect;
+export type AccessRuleInsert = typeof accessRules.$inferInsert;
+
+export type AccessRuleGroupRow = typeof accessRuleGroups.$inferSelect;
+export type AccessRuleGroupInsert = typeof accessRuleGroups.$inferInsert;
+
+export type AccessRuleTimeZoneRow = typeof accessRuleTimeZones.$inferSelect;
+export type AccessRuleTimeZoneInsert = typeof accessRuleTimeZones.$inferInsert;
+
+export type AccessRulePortalRow = typeof accessRulePortals.$inferSelect;
+export type AccessRulePortalInsert = typeof accessRulePortals.$inferInsert;
