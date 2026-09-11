@@ -100,6 +100,52 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     attempts INTEGER,
     failure_category TEXT
   )`,
+  // --- Admin Management Panel additions (strictly additive; kept in sync with
+  // schema.ts). Ordered parent-before-child so referenced tables exist first.
+  // See design.md → "Data Models → Idempotent DDL additions". ---
+  `CREATE TABLE IF NOT EXISTS groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS users_groups (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, group_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS portals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS time_zones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS time_ranges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    time_zone_id INTEGER NOT NULL REFERENCES time_zones(id) ON DELETE CASCADE,
+    days INTEGER NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS access_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS access_rule_groups (
+    access_rule_id INTEGER NOT NULL REFERENCES access_rules(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE RESTRICT,
+    PRIMARY KEY (access_rule_id, group_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS access_rule_time_zones (
+    access_rule_id INTEGER NOT NULL REFERENCES access_rules(id) ON DELETE CASCADE,
+    time_zone_id INTEGER NOT NULL REFERENCES time_zones(id) ON DELETE RESTRICT,
+    PRIMARY KEY (access_rule_id, time_zone_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS access_rule_portals (
+    access_rule_id INTEGER NOT NULL REFERENCES access_rules(id) ON DELETE CASCADE,
+    portal_id INTEGER NOT NULL REFERENCES portals(id) ON DELETE RESTRICT,
+    PRIMARY KEY (access_rule_id, portal_id)
+  )`,
 ];
 
 /**
