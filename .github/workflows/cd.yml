@@ -1,0 +1,100 @@
+# Continuous Delivery — build & publish the image and cut a release (Req 12).
+#
+# Triggered ONLY by pushing a semantic-version tag `vMAJOR.MINOR.PATCH`. Any
+# tag that does not match the pattern does not start this workflow, so no image
+# is built or published (Req 12.2). On a matching tag the job:
+#   1. lints, builds and tests the workspace (gates the release on green);
+#   2. derives VERSION by stripping the leading `v` (v1.2.3 -> 1.2.3, Req 12.4);
+#   3. builds the root Dockerfile and pushes two tags to Docker Hub —
+#      `<user>/controlid-facial-emulator:<VERSION>` and `:latest` (Req 12.4, 12.5);
+#      a build failure fails the job before any push (Req 12.3);
+#   4. only after a successful push, creates a GitHub release named with the tag
+#      whose body is an auto-generated changelog of commits since the previous
+#      tag (Req 12.7). Because the release step depends on the successful push
+#      step, a publish failure aborts the job and no release is created (Req 12.6).
+#
+# Required repository secrets:
+#   DOCKERHUB_USERNAME  — Docker Hub account/namespace that owns the image.
+#   DOCKERHUB_TOKEN     — Docker Hub access token with push permission.
+name: CD
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+" # semver tags only (Req 12.1, 12.2)
+
+jobs:
+  release:
+    name: Build, publish & release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # Req 12.1 (build within 30 minutes)
+    permissions:
+      contents: write # required to create the GitHub release (Req 12.7)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the changelog can diff against the previous tag
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Gate the release on a green build so a broken commit is never published.
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      # Derive the image version from the tag: refs/tags/v1.2.3 -> 1.2.3 (Req 12.4).
+      - name: Derive version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Build the root Dockerfile and push BOTH tags. A build failure fails this
+      # step (and the job) before publishing (Req 12.3). Publishing both tags in
+      # one push keeps `:version` and `:latest` identical (Req 12.4, 12.5).
+      - name: Build and push image
+        id: build_push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/controlid-facial-emulator:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/controlid-facial-emulator:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Runs only if every prior step (including the push) succeeded. If the push
+      # failed, the job has already stopped and no release is created (Req 12.6).
+      - name: Create GitHub release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true # changelog of commits since the previous tag (Req 12.7)
