@@ -17,6 +17,8 @@ import type { HttpPostFn } from '../services/push-engine.js';
 export const TEST_RESOLVED: ResolvedConfig = {
   mode: 'ephemeral',
   dbPath: ':memory:',
+  // Tests inject an in-memory PhotoStorage, so this dir is never written to.
+  dataDir: '.',
   port: 0,
   deviceId: 478435,
   login: 'admin',

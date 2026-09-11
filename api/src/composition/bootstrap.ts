@@ -63,6 +63,13 @@ const MAX_PORT = 65535;
 export interface ResolvedConfig {
   mode: StateMode;
   dbPath: string;
+  /**
+   * Root data directory under which the `photos/` subfolder is created
+   * (Req 13.3). Derived from `EMULATOR_DATA_DIR` when set, else the directory of
+   * `dbPath`. In persistent mode this sits on the mounted volume so stored
+   * photos survive restarts alongside the SQLite file.
+   */
+  dataDir: string;
   port: number;
   deviceId: number;
   login: string;
@@ -147,6 +154,14 @@ export function resolveConfig(env: EmulatorEnv): ResolvedConfig {
       ? dbPathRaw.trim()
       : DEFAULT_DB_PATH;
 
+  // Data dir for stored photos: explicit EMULATOR_DATA_DIR, else the DB's
+  // directory (Req 13.3). For an in-memory DB (`:memory:`) dirname yields '.'.
+  const dataDirRaw = env.EMULATOR_DATA_DIR;
+  const dataDir =
+    dataDirRaw !== undefined && dataDirRaw.trim() !== ''
+      ? dataDirRaw.trim()
+      : dirname(dbPath);
+
   const port = parsePort(env.EMULATOR_PORT);
   const deviceId = parseDeviceId(env.EMULATOR_DEVICE_ID);
   const login = parseCredential('EMULATOR_LOGIN', env.EMULATOR_LOGIN, DEFAULT_LOGIN);
@@ -156,7 +171,7 @@ export function resolveConfig(env: EmulatorEnv): ResolvedConfig {
     DEFAULT_PASSWORD,
   );
 
-  return { mode, dbPath, port, deviceId, login, password, warnings };
+  return { mode, dbPath, dataDir, port, deviceId, login, password, warnings };
 }
 
 /** Parse/validate `EMULATOR_PORT`; default 8080; must be an integer in 1–65535. */
