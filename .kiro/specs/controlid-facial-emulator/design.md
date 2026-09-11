@@ -511,3 +511,81 @@ Dispatched by `forceKeepAlive()` (Req 6.3). Grounded in the keep-alive shape:
 - `POST .../operation_mode` — `{ "operation_mode": { "mode": 0, "mode_name": "DEFAULT", "time": 1490271121, "last_offline": 1490261121, "exception_mode": "none" }, "device_id": 123456 }`
 - `POST .../door` — `{ "door": { "id": 1, "open": true }, "access_event_id": 15, "device_id": 1038508, "time": 1575475894 }`
 
+## Error Handling
+
+| Condition | Response / behavior | Requirement |
+|---|---|---|
+| Invalid JSON, missing required field, or wrong field type on a `.fcgi` route | `400` + `error-description` naming the failed rule; no state change | 1.4 |
+| Unknown endpoint path | `404` + `error-description`; no state change | 1.5 |
+| Wrong HTTP method for a known route | `405` | 1.6 |
+| Login credentials mismatch | `401`, no session token, failure body | 2.2 |
+| Login missing username/password | `400`, body names the missing field | 2.3 |
+| Protected route with no/empty/malformed/expired session | `401`, command not processed | 2.5 |
+| Config change with unrecognized key or invalid value | Reject whole request, store unchanged, validation error names rejected key | 3.2 |
+| Log/biometry filter unrecognized or invalid | `400`, no records, `error-description` names the parameter | 4.5 |
+| No Push Target configured on simulate | Record `no_target` in log; no POST | 5.5 |
+| Push timeout / unreachable / non-2xx after all retries | Record failure with target, final status/timeout, total attempts; surface error to developer keeping selection | 5.8, 6.5 |
+| Persistent mode but volume missing/unwritable | Abort startup, non-zero exit, error message, do not listen | 9.5, 10.4 |
+| Unknown/absent state mode | Default to ephemeral + emit warning | 9.6 |
+| Missing/invalid required env var or dependency at startup | Terminate with non-zero exit + specific log message, do not listen | 10.4 |
+
+Push failures are categorized (`timeout`, `unreachable`, `http_error`, `no_target`) and
+each category, plus the HTTP status code when available, is recorded on the interception
+record (Req 8.4).
+
+## Configuration and Deployment
+
+### Environment variables
+
+| Variable | Purpose | Accepted values | Default |
+|---|---|---|---|
+| `EMULATOR_STATE_MODE` | Select state mode | `persistent` \| `ephemeral` | `ephemeral` (with warning if unset/unknown, Req 9.6) |
+| `EMULATOR_DB_PATH` | SQLite file path (persistent mode) | filesystem path on mounted volume | `/data/emulator.sqlite` |
+| `EMULATOR_PORT` | Listen port | 1–65535 | `8080` |
+| `EMULATOR_DEVICE_ID` | Synthetic device id used in payloads | integer | generated synthetic id |
+| `EMULATOR_LOGIN` | Admin username | ≤ 64 chars | `admin` |
+| `EMULATOR_PASSWORD` | Admin password | ≤ 64 chars | `admin` |
+
+Ephemeral mode uses SQLite `:memory:` (or a temp file discarded on stop); persistent mode
+uses `EMULATOR_DB_PATH` on the mounted volume (Req 9.1, 9.2).
+
+### Dockerfile (multi-stage plan)
+
+1. **web build** (`node:alpine`): install web deps, `vite build` → static assets.
+2. **api build** (`node:alpine`): install api deps, `tsc` build, prune dev deps.
+3. **runner** (`node:alpine`): copy compiled API + static assets + production deps only;
+   `EXPOSE 8080`; `CMD ["node", "dist/main.js"]`. Target final image < 200 MB (Req 10.2),
+   single port (Req 10.1), ready within 10 s (Req 10.3).
+
+### docker-compose.yml (outline)
+
+```yaml
+services:
+  emulator:
+    build: .
+    ports: ["8080:8080"]              # host:container (Req 10.5)
+    environment:
+      EMULATOR_STATE_MODE: persistent
+    volumes:
+      - emulator-data:/data           # persistent-mode volume (Req 9.1)
+volumes:
+  emulator-data:
+```
+
+### CI workflow (GitHub Actions)
+
+On `push` to `main` and on `pull_request` (opened/synchronize/reopened): checkout →
+install → **lint** → **test** (vitest, including property tests). Lint failure or any test
+failure fails the run and records the failing step; all-green reports success. Job timeout
+15 min (Req 11.1–11.6).
+
+### CD workflow (GitHub Actions)
+
+Trigger on tag matching `v[0-9]+.[0-9]+.[0-9]+`. Non-matching tags do no build/publish
+(Req 12.2). Steps: `docker buildx` build → on build failure stop without publishing
+(Req 12.3) → push to Docker Hub as `<version>` (tag minus leading `v`) and `latest`
+(Req 12.4, 12.5) → on publish failure fail and skip release (Req 12.6) → create GitHub
+release named with the tag, changelog = commit messages since previous semver tag
+(Req 12.7).
+
+
