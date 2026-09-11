@@ -91,7 +91,7 @@ selection is required.
     - _Requirements: 3.1, 3.5, 3.6, 14.1_ · _Design: Testing Strategy → Unit_
 
 - [ ] 4. Admin repositories (typed reads/writes over DrizzleDb)
-  - [ ] 4.1 Extend `api/src/repositories/user-repository.ts` for admin CRUD + photo
+  - [x] 4.1 Extend `api/src/repositories/user-repository.ts` for admin CRUD + photo
     - Keep `list()`/`appendAccessLog()`/`getBiometry()` unchanged. Upgrade `getImage` and add
       `getImageWithMime(userId)` to delegate to `PhotoStorage.read` (inject `PhotoStorage`).
       Add `AdminUserView`/`UserWrite` types and `listAdmin()`, `getAdmin(id)`, `create(write)`,
@@ -100,63 +100,63 @@ selection is required.
       Drizzle transaction.
     - _Requirements: 2.1, 2.2, 2.4, 2.5, 2.7, 2.8, 3.1, 3.5, 3.6, 4.7_ · _Design: UserRepository extensions_
 
-  - [ ] 4.2 Create `api/src/repositories/group-repository.ts`
+  - [x] 4.2 Create `api/src/repositories/group-repository.ts`
     - Implement `GroupRepository` (`list` → `GroupView` with `memberCount`; `get` →
       `GroupDetail` with members; `create`; `update(id, name, memberIds)` replacing membership
       transactionally; `delete` cascading `users_groups`; `referencingAccessRules(id)` for the
       409 check) and its `GroupView`/`GroupDetail` types.
     - _Requirements: 4.1, 4.3, 4.4, 4.6, 4.8, 7.7_ · _Design: GroupRepository_
 
-  - [ ] 4.3 Create `api/src/repositories/portal-repository.ts`
+  - [x] 4.3 Create `api/src/repositories/portal-repository.ts`
     - Implement `PortalRepository` (`list`/`get`/`create`/`update`/`delete` +
       `referencingAccessRules(id)`) and `PortalView`.
     - _Requirements: 6.1, 6.3, 6.5, 6.6, 7.7_ · _Design: PortalRepository_
 
-  - [ ] 4.4 Create `api/src/repositories/time-zone-repository.ts`
+  - [x] 4.4 Create `api/src/repositories/time-zone-repository.ts`
     - Implement `TimeZoneRepository` (`list`/`get`/`create(name, ranges)`/`update`/`delete`
       cascading `time_ranges` + `referencingAccessRules(id)`) with `TimeZoneView`/
       `TimeRangeView`/`TimeRangeWrite`. Persist ranges using the 7-bit `days` mask; decode to
       weekday-name arrays on read. Ranges write transactionally with the zone.
     - _Requirements: 5.1, 5.5, 5.7, 5.8, 7.7_ · _Design: TimeZoneRepository_
 
-  - [ ] 4.5 Create `api/src/repositories/access-rule-repository.ts`
+  - [x] 4.5 Create `api/src/repositories/access-rule-repository.ts`
     - Implement `AccessRuleRepository` (`list`/`get`/`create(write)`/`update(id, write)`/
       `delete` cascading association rows only) with `AccessRuleView`/`AccessRuleWrite`;
       association writes are transactional; delete leaves referenced entities intact.
     - _Requirements: 7.1, 7.4, 7.5, 7.6, 7.8_ · _Design: AccessRuleRepository_
 
-  - [ ] 4.6 Create `api/src/repositories/access-log-repository.ts`
+  - [x] 4.6 Create `api/src/repositories/access-log-repository.ts`
     - Implement read-only `AccessLogRepository` over `access_logs`: `query(filter)`
       (`userId`/`event`/`from`/`to`, AND-combined, ordered `time` DESC) and `recent(limit)`
       (newest-first). Return the existing all-string `AccessLogRecord` envelope.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7, 9.2_ · _Design: AccessLogRepository_
 
-  - [ ]* 4.7 Unit tests for admin repositories
+  - [x]* 4.7 Unit tests for admin repositories
     - Test membership replacement, cascade-on-delete, `referencingAccessRules` results, mask
       encode/decode on time ranges, and access-log filter/ordering over an ephemeral DB.
     - _Requirements: 14.1_ · _Design: Testing Strategy → Unit_
 
 - [ ] 5. Admin services (validation + referential integrity)
-  - [ ] 5.1 Create `api/src/services/user-admin-service.ts`
+  - [x] 5.1 Create `api/src/services/user-admin-service.ts`
     - `UserAdminService`: registration 1–64 and name 1–128 validation via `validation.ts`,
       PIN→`password`, submitted `groupIds` existence check (400 naming the id), `NotFoundError`
       on unknown id, and photo save/delete orchestration (`setPhoto`, `deletePhoto`) plus
       cascade of memberships and photo file on user delete.
     - _Requirements: 2.1, 2.2, 2.3, 2.6, 2.7, 2.8, 3.1, 3.2, 3.6, 3.7, 4.7_ · _Design: Admin services → UserAdminService_
 
-  - [ ] 5.2 Create `api/src/services/group-service.ts`
+  - [x] 5.2 Create `api/src/services/group-service.ts`
     - `GroupService`: name validation (400), member-id existence (400 naming invalid id),
       `NotFoundError` (404), and `ConflictError` (409) naming referencing Access Rules when
       deleting a referenced Group.
     - _Requirements: 4.1, 4.2, 4.5, 4.6, 4.7, 4.8, 7.7_ · _Design: Admin services → GroupService_
 
-  - [ ] 5.3 Create `api/src/services/time-zone-service.ts`
+  - [x] 5.3 Create `api/src/services/time-zone-service.ts`
     - `TimeZoneService`: name validation, per-range validation (`HH:MM`, `start < end`, ≥ 1
       valid weekday) with weekday-name⇄mask encoding, `NotFoundError` (404), and
       `ConflictError` (409) on referenced delete.
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.6, 5.7, 5.8, 7.7_ · _Design: Admin services → TimeZoneService_
 
-  - [ ]* 5.4 Property test: Time Range validity
+  - [x]* 5.4 Property test: Time Range validity
     - **Property 1: Time Range validity** — for any generated `startTime`/`endTime` (valid
       `HH:MM` mixed with noise) and day-name set, `validateTimeRange` accepts iff both times
       are valid `HH:MM`, `start` strictly earlier than `end`, and the day set is non-empty
@@ -164,18 +164,18 @@ selection is required.
       `// Feature: admin-management-panel, Property 1`.
     - _Requirements: 5.2, 5.3, 5.4, 14.3_ · _Design: Correctness Properties → Property 1_
 
-  - [ ] 5.5 Create `api/src/services/portal-service.ts`
+  - [x] 5.5 Create `api/src/services/portal-service.ts`
     - `PortalService`: name validation (400), `NotFoundError` (404), `ConflictError` (409) on
       referenced delete.
     - _Requirements: 6.1, 6.2, 6.4, 6.5, 6.6, 7.7_ · _Design: Admin services → PortalService_
 
-  - [ ] 5.6 Create `api/src/services/access-rule-service.ts`
+  - [x] 5.6 Create `api/src/services/access-rule-service.ts`
     - `AccessRuleService`: name validation, non-empty group/time-zone/portal sets (400 naming
       the missing association), existence of every referenced id (400 naming the missing
       reference), `NotFoundError` (404); delete leaves referenced entities unchanged.
     - _Requirements: 7.1, 7.2, 7.3, 7.5, 7.6, 7.8_ · _Design: Admin services → AccessRuleService_
 
-  - [ ]* 5.7 Property test: Access-rule referential integrity
+  - [x]* 5.7 Property test: Access-rule referential integrity
     - **Property 2: Access-rule referential integrity** — for a random universe of
       Groups/TimeZones/Portals and an Access Rule referencing a non-empty subset of each,
       deleting a referenced entity throws `ConflictError` (→409) and it still exists; deleting
@@ -183,7 +183,7 @@ selection is required.
       `// Feature: admin-management-panel, Property 2`.
     - _Requirements: 7.7, 7.8, 14.4_ · _Design: Correctness Properties → Property 2_
 
-  - [ ]* 5.8 Property test: Access-rule composition validity
+  - [x]* 5.8 Property test: Access-rule composition validity
     - **Property 4: Access-rule composition validity** — for any submitted Access Rule, the
       service creates it iff name is valid (1–128), each id set is non-empty, and every
       referenced id exists; otherwise rejected with 400 and nothing persisted. Single
@@ -191,12 +191,12 @@ selection is required.
       `// Feature: admin-management-panel, Property 4`.
     - _Requirements: 7.1, 7.2, 7.3_ · _Design: Correctness Properties → Property 4_
 
-  - [ ] 5.9 Create `api/src/services/dashboard-service.ts`
+  - [x] 5.9 Create `api/src/services/dashboard-service.ts`
     - `DashboardService`: aggregate counts of Users/Groups/Access Rules/Portals (zero when
       empty) plus `AccessLogRepository.recent(10)` for the 10 most-recent logs.
     - _Requirements: 9.1, 9.2, 9.3_ · _Design: Admin services → DashboardService_
 
-  - [ ]* 5.10 Property test: Group membership round-trip
+  - [x]* 5.10 Property test: Group membership round-trip
     - **Property 3: Group membership round-trip** — for any users and any subset chosen as
       members, setting the group membership then reading it back returns exactly that member
       set (order-insensitive), and deleting the group leaves every member user intact. Single
@@ -205,12 +205,12 @@ selection is required.
     - _Requirements: 4.6, 2.8_ · _Design: Correctness Properties → Property 3_
 
 - [ ] 6. Container wiring and config plumbing
-  - [ ] 6.1 Add `dataDir` to `ResolvedConfig` in `api/src/composition/bootstrap.ts`
+  - [x] 6.1 Add `dataDir` to `ResolvedConfig` in `api/src/composition/bootstrap.ts`
     - Derive a new `dataDir` field from `EMULATOR_DATA_DIR` else `dirname(dbPath)` in
       `resolveConfig`; update `TEST_RESOLVED` in `routes/test-helpers.ts` accordingly.
     - _Requirements: 13.3_ · _Design: Container wiring_
 
-  - [ ] 6.2 Extend `buildContainer`/`Container`/`BuildContainerOverrides` in `container.ts`
+  - [x] 6.2 Extend `buildContainer`/`Container`/`BuildContainerOverrides` in `container.ts`
     - Construct `PhotoStorage` from `resolved.dataDir`; inject it into the upgraded
       `UserRepository` and `UserAdminService`; construct and expose `photos`, `groups`,
       `portals`, `timeZones`, `accessRules`, `userAdmin`, `dashboard`, and read-only
