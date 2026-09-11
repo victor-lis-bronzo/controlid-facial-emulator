@@ -340,6 +340,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084632
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133982823
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789134414717
       }
     ],
     "16.2 Implement event controls with identity selection": [
@@ -347,6 +357,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084635
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133983780
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789134416822
       }
     ],
     "16.3 Implement error handling and Interception Log view": [
@@ -354,6 +374,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084638
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133984806
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789134416165
       }
     ],
     "17.1 Write multi-stage Dockerfile and docker-compose.yml": [
@@ -620,6 +650,20 @@
         "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789133922182
+      }
+    ],
+    "16.4 Write component tests for control panel behavior": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789134413317
+      }
+    ],
+    "16. React + Vite control panel (`web/`)": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789134416826
       }
     ]
   }
