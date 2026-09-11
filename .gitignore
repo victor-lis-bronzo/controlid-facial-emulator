@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build / compiled output
+dist/
+build/
+out/
+
+# Vite / React build outputs
+web/dist/
+.vite/
+*.local
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# SQLite databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# TypeScript build info
+*.tsbuildinfo

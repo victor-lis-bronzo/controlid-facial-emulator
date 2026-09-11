@@ -1,0 +1,245 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create root and `api/` project scaffolding and tooling": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084566
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131108106
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131271136
+      }
+    ],
+    "1.2 Define shared Control-iD payload/types module": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084569
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131280618
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131488372
+      }
+    ],
+    "2.1 Implement Drizzle schema and DB connection factory": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084573
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131281519
+      },
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131489773
+      }
+    ],
+    "3.1 Implement Bootstrap / StateMode selector": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084578
+      }
+    ],
+    "4.1 Implement ConfigService with defaults, validation, and target resolution": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084582
+      }
+    ],
+    "5.1 Implement SessionService": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084585
+      }
+    ],
+    "6.1 Implement ObjectStore and UserRepository": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084590
+      }
+    ],
+    "7.1 Implement InterceptionLogger": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084592
+      }
+    ],
+    "8. Checkpoint — data + core services": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084595
+      }
+    ],
+    "9.1 Implement PushEngine with timeout and retry policy": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084599
+      }
+    ],
+    "10.1 Implement SimulationService": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084602
+      }
+    ],
+    "11.1 Wire dependency-injection composition root and Fastify instance": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084606
+      }
+    ],
+    "12.1 Implement session middleware and login/session routes": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084610
+      }
+    ],
+    "12.2 Implement configuration `.fcgi` routes": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084613
+      }
+    ],
+    "12.3 Implement object/log/biometry `.fcgi` routes": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084616
+      }
+    ],
+    "12.4 Implement global error, 404, and 405 handling": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084619
+      }
+    ],
+    "13.1 Implement Control Panel and Interception API routes": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084622
+      }
+    ],
+    "14.1 Implement StaticAssetServer and `main.ts` entrypoint": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084625
+      }
+    ],
+    "15. Checkpoint — full API surface": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084628
+      }
+    ],
+    "16.1 Scaffold the `web/` React + Vite app and API client": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084632
+      }
+    ],
+    "16.2 Implement event controls with identity selection": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084635
+      }
+    ],
+    "16.3 Implement error handling and Interception Log view": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084638
+      }
+    ],
+    "17.1 Write multi-stage Dockerfile and docker-compose.yml": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084641
+      }
+    ],
+    "18.1 Add GitHub Actions CI workflow": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084644
+      }
+    ],
+    "18.2 Add GitHub Actions CD workflow": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084647
+      }
+    ],
+    "19.1 Write root README": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084650
+      }
+    ],
+    "20. Final checkpoint — full build, tests, and image": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131084654
+      }
+    ],
+    "1. Scaffold monorepo, tooling, and shared types": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131488376
+      }
+    ],
+    "2. Database schema and connection layer": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131489776
+      }
+    ],
+    "2.2 Write unit tests for schema/connection factory": [
+      {
+        "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789131490570
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@controlid-emulator/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Control-iD Facial Emulator API server (Fastify + Drizzle/SQLite).",
+  "main": "dist/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,json}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc",
+    "dev": "tsx watch src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.0.4",
+    "better-sqlite3": "^11.8.1",
+    "drizzle-orm": "^0.38.4",
+    "fastify": "^5.2.1",
+    "undici": "^7.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.7",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "drizzle-kit": "^0.30.2",
+    "eslint": "^9.18.0",
+    "fast-check": "^3.23.2",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.2"
+  }
+}
