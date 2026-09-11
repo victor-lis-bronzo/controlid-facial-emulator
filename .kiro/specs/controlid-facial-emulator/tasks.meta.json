@@ -78,6 +78,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084578
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789132967902
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133908030
       }
     ],
     "4.1 Implement ConfigService with defaults, validation, and target resolution": [
@@ -199,6 +209,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084606
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133221692
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133908989
       }
     ],
     "12.1 Implement session middleware and login/session routes": [
@@ -206,6 +226,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084610
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133222597
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133910380
       }
     ],
     "12.2 Implement configuration `.fcgi` routes": [
@@ -213,6 +243,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084613
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133224052
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133911334
       }
     ],
     "12.3 Implement object/log/biometry `.fcgi` routes": [
@@ -220,6 +260,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084616
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133224995
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133912732
       }
     ],
     "12.4 Implement global error, 404, and 405 handling": [
@@ -227,6 +277,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084619
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133226387
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133914139
       }
     ],
     "13.1 Implement Control Panel and Interception API routes": [
@@ -234,6 +294,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084622
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133227342
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133915085
       }
     ],
     "14.1 Implement StaticAssetServer and `main.ts` entrypoint": [
@@ -241,6 +311,16 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084625
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133228622
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133916529
       }
     ],
     "15. Checkpoint — full API surface": [
@@ -248,6 +328,11 @@
         "executionId": "162e8ff2-a93f-4eba-a4c3-6dd77158d071",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789131084628
+      },
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133923099
       }
     ],
     "16.1 Scaffold the `web/` React + Vite app and API client": [
@@ -465,6 +550,76 @@
         "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
         "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
         "timestamp": 1789132921825
+      }
+    ],
+    "3. Bootstrap and state-mode selection": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133908033
+      }
+    ],
+    "11. Composition root and inbound interception tap": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133908992
+      }
+    ],
+    "12. FcgiRouter and `.fcgi` route handlers": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133914143
+      }
+    ],
+    "13. Control Panel and Interception APIs": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133915090
+      }
+    ],
+    "14. Static asset serving and main entrypoint": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133916533
+      }
+    ],
+    "3.2 Write unit tests for Bootstrap": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133917433
+      }
+    ],
+    "11.2 Write integration test for inbound interception tap": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133918877
+      }
+    ],
+    "12.5 Write integration tests for `.fcgi` contract and errors": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133919782
+      }
+    ],
+    "13.2 Write integration tests for control-panel/interception APIs": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133921228
+      }
+    ],
+    "14.2 Write integration test for SPA serving and fallback": [
+      {
+        "executionId": "883476fc-3f90-4c61-a9c3-29e4529b990a",
+        "chatSessionId": "6523485c-4f4d-4191-b6aa-4c5681eafca3",
+        "timestamp": 1789133922182
       }
     ]
   }

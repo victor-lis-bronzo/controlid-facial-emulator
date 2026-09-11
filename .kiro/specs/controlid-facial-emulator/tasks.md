@@ -52,8 +52,8 @@ individually committable.
       round-trips a written row after reopening the same file
     - _Traceability: Req 9.1, 9.2; Design: Data Models_
 
-- [ ] 3. Bootstrap and state-mode selection
-  - [~] 3.1 Implement Bootstrap / StateMode selector
+- [x] 3. Bootstrap and state-mode selection
+  - [x] 3.1 Implement Bootstrap / StateMode selector
     - Implement `resolveMode(env)` (persistent|ephemeral, default ephemeral + warning on
       unset/unknown), `openStore(mode)`, `ensureVolumeWritable(path)` (abort with non-zero
       exit + message when persistent volume missing/unwritable), and `initDefaultsIfEmpty`
@@ -63,7 +63,7 @@ individually committable.
     - Apply the selected mode before binding the port
     - _Traceability: Req 9.3, 9.4, 9.5, 9.6, 10.4; Design: Bootstrap / StateMode selector_
 
-  - [ ]* 3.2 Write unit tests for Bootstrap
+  - [x]* 3.2 Write unit tests for Bootstrap
     - Cover: default-to-ephemeral + warning on unset/unknown mode (9.6); persistent-with-
       missing-volume aborts without listening (9.5, 10.4); defaults initialized when store
       empty (9.3); missing/invalid required env var terminates with non-zero exit (10.4)
@@ -202,73 +202,73 @@ individually committable.
       selection (6.5)
     - _Traceability: Req 6.1, 6.2, 6.3, 6.5, 6.6; Design: SimulationService, Error Handling_
 
-- [ ] 11. Composition root and inbound interception tap
-  - [~] 11.1 Wire dependency-injection composition root and Fastify instance
+- [x] 11. Composition root and inbound interception tap
+  - [x] 11.1 Wire dependency-injection composition root and Fastify instance
     - Build a bootstrap/composition module that instantiates DB, ConfigService, SessionService,
       ObjectStore/UserRepository, InterceptionLogger, PushEngine, SimulationService and creates
       the Fastify app; add a global inbound hook tapping `InterceptionLogger.recordInbound`;
       no business logic in route handlers
     - _Traceability: Req 8.1; Design: Architecture (composition root, inbound tap)_
 
-  - [ ]* 11.2 Write integration test for inbound interception tap
+  - [x]* 11.2 Write integration test for inbound interception tap
     - Verify an inbound request is recorded with path, method, ISO-8601 ms timestamp, and body
     - _Traceability: Req 8.1; Design: Architecture_
 
-- [ ] 12. FcgiRouter and `.fcgi` route handlers
-  - [~] 12.1 Implement session middleware and login/session routes
+- [x] 12. FcgiRouter and `.fcgi` route handlers
+  - [x] 12.1 Implement session middleware and login/session routes
     - Register `/login.fcgi` (credential check → token or 401; 400 on missing username/
       password naming the field) and `/session_is_valid.fcgi`; implement session middleware
       that short-circuits protected routes to 401 on absent/empty/malformed/expired token
     - _Traceability: Req 2.1, 2.2, 2.3, 2.4, 2.5; Design: FcgiRouter, SessionService_
 
-  - [~] 12.2 Implement configuration `.fcgi` routes
+  - [x] 12.2 Implement configuration `.fcgi` routes
     - Register `/set_configuration.fcgi` and `/get_configuration.fcgi` (protected) delegating
       to ConfigService with all-or-nothing validation and defaults
     - _Traceability: Req 3.1–3.6; Design: FcgiRouter, ConfigService_
 
-  - [~] 12.3 Implement object/log/biometry `.fcgi` routes
+  - [x] 12.3 Implement object/log/biometry `.fcgi` routes
     - Register `/create_objects.fcgi`, `/load_objects.fcgi`, `/modify_objects.fcgi`,
       `/destroy_objects.fcgi`, `/user_get_image.fcgi`, and `/new_user_identified.fcgi` with
       exact request/response shapes and Content-Type `application/json` (octet-stream for
       images)
     - _Traceability: Req 1.1, 1.2, 4.1–4.5; Design: API/Endpoint Specification_
 
-  - [~] 12.4 Implement global error, 404, and 405 handling
+  - [x] 12.4 Implement global error, 404, and 405 handling
     - JSON Schema validation → 400 + `error-description` and no state change; unknown path →
       404 + `error-description`; wrong method → 405; ensure `Content-Type: application/json`
       and the 200-within-500ms behavior for valid requests
     - _Traceability: Req 1.2, 1.3, 1.4, 1.5, 1.6; Design: Error Handling table_
 
-  - [ ]* 12.5 Write integration tests for `.fcgi` contract and errors
+  - [x]* 12.5 Write integration tests for `.fcgi` contract and errors
     - Live-Fastify round-trips: response shapes/Content-Type (1.1/1.2), 400 on bad body
       (1.4), 404 unknown path (1.5), 405 wrong method (1.6), login flows (2.1–2.3), latency
       budgets (1.3)
     - _Traceability: Req 1.1–1.6, 2.1–2.3; Design: Testing Strategy_
 
-- [ ] 13. Control Panel and Interception APIs
-  - [~] 13.1 Implement Control Panel and Interception API routes
+- [x] 13. Control Panel and Interception APIs
+  - [x] 13.1 Implement Control Panel and Interception API routes
     - Register `GET /api/identities`, `POST /api/simulate/authorized|denied|keep-alive`
       (400 when `userId` missing for authorized), and `GET /api/interception?limit=`
       (newest-first, empty array when none); error bodies carry a message that lets the panel
       keep the developer's selection
     - _Traceability: Req 6.1–6.3, 6.5, 6.6, 7.3, 8.5, 8.6; Design: ControlPanelApi, Interception API_
 
-  - [ ]* 13.2 Write integration tests for control-panel/interception APIs
+  - [x]* 13.2 Write integration tests for control-panel/interception APIs
     - Simulate endpoints return `PushOutcome`; missing `userId` → 400; interception newest-
       first ordering and empty-state array
     - _Traceability: Req 6.1, 6.6, 8.5, 8.6; Design: ControlPanelApi_
 
-- [ ] 14. Static asset serving and main entrypoint
-  - [~] 14.1 Implement StaticAssetServer and `main.ts` entrypoint
+- [x] 14. Static asset serving and main entrypoint
+  - [x] 14.1 Implement StaticAssetServer and `main.ts` entrypoint
     - Serve the built SPA at `/admin` with `index.html` fallback for unknown sub-paths; wire
       `main.ts` to run Bootstrap then bind the single `EMULATOR_PORT` after mode is applied
     - _Traceability: Req 7.1, 7.2, 9.4, 10.1; Design: StaticAssetServer, Bootstrap_
 
-  - [ ]* 14.2 Write integration test for SPA serving and fallback
+  - [x]* 14.2 Write integration test for SPA serving and fallback
     - `/admin` serves the app; unknown `/admin/*` path returns the SPA entry point
     - _Traceability: Req 7.1, 7.2; Design: StaticAssetServer_
 
-- [~] 15. Checkpoint — full API surface
+- [x] 15. Checkpoint — full API surface
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 16. React + Vite control panel (`web/`)
