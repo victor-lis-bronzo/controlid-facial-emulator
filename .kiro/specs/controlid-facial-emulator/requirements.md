@@ -31,3 +31,44 @@ The intended technology direction is Node.js with TypeScript and the Fastify HTT
 - **CI_Pipeline**: The automated workflow that lints and tests the source on changes to the main branch.
 - **CD_Pipeline**: The automated workflow that builds and publishes the Container_Image and creates a versioned release on tag creation.
 
+## Requirements
+
+### Requirement 1: Control-iD Compatible API Surface
+
+**User Story:** As a Developer, I want the Emulator to expose Control-iD-compatible `.fcgi` endpoints, so that I can point an existing integration at the Emulator without changing client code.
+
+#### Acceptance Criteria
+
+1. THE API_Server SHALL expose HTTP endpoints whose paths end with the `.fcgi` suffix, and whose HTTP methods and request body field names match the corresponding endpoints described in the Official_API_Documentation exactly (case-sensitive path and field-name matching).
+2. WHEN an Integrating_Client sends a request to a supported FCGI_Endpoint, THE API_Server SHALL return a response whose field names and JSON structure match the corresponding response described in the Official_API_Documentation, with the response `Content-Type` header set to `application/json`.
+3. WHEN an Integrating_Client sends a request to a supported FCGI_Endpoint with a body that conforms to the field names and types described in the Official_API_Documentation, THE API_Server SHALL respond with an HTTP status code of 200 within 500 milliseconds.
+4. IF an Integrating_Client sends a request to a supported FCGI_Endpoint with a body that is not valid JSON, is missing a required field, or contains a field whose type differs from the type described in the Official_API_Documentation, THEN THE API_Server SHALL respond with an HTTP status code of 400 and a JSON response body containing an error-description field indicating which validation rule failed, without persisting any state change.
+5. IF an Integrating_Client sends a request to an endpoint path not listed in the Official_API_Documentation, THEN THE API_Server SHALL respond with an HTTP status code of 404 and a JSON response body containing an error-description field, without persisting any state change.
+6. IF an Integrating_Client sends a request to a supported FCGI_Endpoint using an HTTP method that does not match the method described for that endpoint in the Official_API_Documentation, THEN THE API_Server SHALL respond with an HTTP status code of 405.
+
+### Requirement 2: Session and Authentication Emulation
+
+**User Story:** As a Developer, I want the Emulator to emulate the device login and session flow, so that clients that authenticate before issuing commands behave the same against the Emulator as against a real reader.
+
+#### Acceptance Criteria
+
+1. WHEN an Integrating_Client sends a login request containing a username no longer than 64 characters and a password no longer than 64 characters to the login FCGI_Endpoint, THE API_Server SHALL respond within 1000 milliseconds with a success response containing a non-empty session token string as described in the Official_API_Documentation.
+2. IF an Integrating_Client sends a login request with a username or password that does not match the configured credentials, THEN THE API_Server SHALL reject the request with an HTTP status code of 401, SHALL NOT return a session token, and SHALL return a response body indicating authentication failure.
+3. IF an Integrating_Client sends a login request that is missing the username field, the password field, or both, THEN THE API_Server SHALL reject the request with an HTTP status code of 400 and SHALL return a response body indicating which required field is missing.
+4. WHEN an Integrating_Client includes a session token in a request to a protected FCGI_Endpoint, and that token matches a token issued by a prior successful login and has not exceeded its validity duration of 3600 seconds since issuance, THE API_Server SHALL process the request and respond within 1000 milliseconds.
+5. IF an Integrating_Client sends a request to a protected FCGI_Endpoint with no session token, an empty session token, a malformed session token, or a session token whose validity duration of 3600 seconds since issuance has elapsed, THEN THE API_Server SHALL reject the request with an HTTP status code of 401 and SHALL NOT process the requested command.
+
+### Requirement 3: Configuration Persistence
+
+**User Story:** As a Developer, I want configuration submitted by a client to be stored durably, so that the Emulator continues to behave according to the most recent configuration.
+
+#### Acceptance Criteria
+
+1. WHEN an Integrating_Client sends a configuration change containing one or more valid configuration key-value pairs to the configuration FCGI_Endpoint, THE API_Server SHALL write each submitted configuration value to the Configuration_Store and return a success response within 2000 milliseconds.
+2. IF an Integrating_Client sends a configuration change in which any key is not a recognized configuration key or any value fails type or range validation, THEN THE API_Server SHALL reject the entire request, leave all values in the Configuration_Store unchanged, and return a response indicating a validation error identifying the rejected key.
+3. WHEN an Integrating_Client requests the current configuration from the configuration FCGI_Endpoint, THE API_Server SHALL return the values most recently written to the Configuration_Store for all recognized configuration keys within 2000 milliseconds.
+4. WHEN an Integrating_Client requests the current configuration and no value has been written for a recognized configuration key, THE API_Server SHALL return that key with its documented default value.
+5. WHEN an Integrating_Client submits a configuration change that sets the Push_Target to a non-empty string of 1 to 2048 characters, THE API_Server SHALL persist the new Push_Target value to the Configuration_Store, replacing any previously stored Push_Target value.
+6. WHEN a configuration change is submitted for a recognized configuration key that already holds a value, THE API_Server SHALL replace the stored value with the submitted value so that a subsequent read returns only the submitted value.
+7. WHERE the Emulator is running in Persistent_Mode, THE Configuration_Store SHALL retain all stored configuration values across a container restart such that a read issued after restart returns the same values written before the restart.
+8. WHERE the Emulator is not running in Persistent_Mode, WHEN the container restarts, THE Configuration_Store SHALL return the documented default value for every recognized configuration key.
