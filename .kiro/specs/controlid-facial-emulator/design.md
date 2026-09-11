@@ -345,3 +345,169 @@ Persistent mode with an unwritable/absent volume aborts startup with a non-zero 
 clear message, without listening (Req 9.5, 10.4). An unrecognized/absent mode defaults to
 ephemeral and emits a warning (Req 9.6).
 
+## Data Models
+
+Drizzle schema (SQLite). Timestamps are stored as ISO 8601 UTC strings with millisecond
+precision for the interception log; other time fields mirror the device's Unix-epoch
+string/number conventions for fidelity.
+
+```typescript
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+
+// Configuration stored per module as a JSON blob keyed by module name.
+export const config = sqliteTable('config', {
+  module: text('module').primaryKey(),      // e.g. 'monitor'
+  json: text('json').notNull(),             // serialized Record<string, unknown>
+  updatedAt: text('updated_at').notNull(),  // ISO 8601 UTC
+});
+
+export const users = sqliteTable('users', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  registration: text('registration').notNull(),
+  name: text('name').notNull(),
+  password: text('password'),
+  imagePath: text('image_path'),            // optional stored face image
+});
+
+export const accessLogs = sqliteTable('access_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  time: text('time').notNull(),             // Unix epoch seconds (string, device shape)
+  event: text('event').notNull(),           // '7' granted, '6' denied, '3' not identified
+  deviceId: text('device_id').notNull(),
+  identifierId: text('identifier_id').notNull().default('0'),
+  userId: text('user_id').notNull().default('0'),
+  portalId: text('portal_id').notNull().default('1'),
+  identificationRuleId: text('identification_rule_id').notNull().default('0'),
+  cardValue: text('card_value').notNull().default('0'),
+  logTypeId: text('log_type_id').notNull().default('-1'),
+});
+
+export const sessions = sqliteTable('sessions', {
+  token: text('token').primaryKey(),
+  issuedAt: integer('issued_at').notNull(),   // epoch ms
+  expiresAt: integer('expires_at').notNull(),  // issuedAt + 3600_000
+});
+
+export const interceptionLog = sqliteTable('interception_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  direction: text('direction').notNull(),       // 'inbound' | 'outbound'
+  method: text('method').notNull(),
+  path: text('path').notNull(),                 // inbound path or outbound target URL
+  timestamp: text('timestamp').notNull(),       // ISO 8601 UTC, ms precision
+  body: text('body').notNull(),
+  truncated: integer('truncated', { mode: 'boolean' }).notNull().default(false),
+  outcome: text('outcome'),                     // 'success' | 'failure' | 'no_target'
+  statusCode: integer('status_code'),
+  attempts: integer('attempts'),
+  failureCategory: text('failure_category'),
+});
+```
+
+Ordering for the interception view uses `id DESC` (monotonic with insertion), which is a
+faithful proxy for newest-first even when timestamps tie at millisecond precision.
+
+
+## API / Endpoint Specification
+
+### Emulated Control-iD `.fcgi` endpoints
+
+All shapes are grounded in the Official API Documentation. Content-Type is
+`application/json` for both request and response unless noted (Req 1.2). The session token
+is passed as `?session=<token>` on protected routes.
+
+| Path | Method | Auth | Request shape | Response shape |
+|---|---|---|---|---|
+| `/login.fcgi` | POST | No | `{ "login": "admin", "password": "admin" }` | `{ "session": "apx7NM2CErTcvXpuvExuzaZ" }` |
+| `/session_is_valid.fcgi` | POST | No | `{ "session": "<token>" }` | `{ "session_is_valid": true }` |
+| `/set_configuration.fcgi` | POST | Yes | `{ "monitor": { "hostname": "192.168.0.20", "port": "8000", "path": "api/notifications", "alive_interval": 30000, "enable_photo_upload": 1, "request_timeout": "5000" } }` | `{}` (200 success) |
+| `/get_configuration.fcgi` | POST | Yes | `{ "monitor": ["alive_interval"] }` | `{ "monitor": { "alive_interval": "30000" } }` |
+| `/create_objects.fcgi` | POST | Yes | `{ "object": "users", "values": [{ "registration": "0123", "name": "Walter White", "password": "Heisenberg" }] }` | `{ "ids": [8] }` |
+| `/load_objects.fcgi` | POST | Yes | `{ "object": "access_logs", "where": { ... } }` | `{ "access_logs": [ { ... } ] }` |
+| `/modify_objects.fcgi` | POST | Yes | `{ "object": "users", "values": {...}, "where": {...} }` | `{ "changes": 1 }` |
+| `/destroy_objects.fcgi` | POST | Yes | `{ "object": "users", "where": {...} }` | `{ "changes": 1 }` |
+| `/user_get_image.fcgi` | GET/POST | Yes | `?user_id=8` | `application/octet-stream` (image bytes) |
+| `/new_user_identified.fcgi` | POST | No* | `application/x-www-form-urlencoded`: `device_id, identifier_id, event, user_id, user_name, time, portal_id, uuid, confidence, face_mask` | `{ "result": { "event": 7, "user_id": 6, "user_name": "Neal Caffrey", "user_image": false, "portal_id": 1, "actions": [ { "action": "door", "parameters": "door=1" } ], "message": "..." } }` |
+
+\* `new_user_identified.fcgi` models the online-identification callback a device sends to a
+server; the emulator implements the "Mensagem de Retorno" reply shape. Event codes:
+`7` = access granted, `6` = access denied, `3` = not identified; `duress` = `1` panic /
+`0` normal.
+
+Validation: bodies that are not valid JSON, are missing required fields, or carry a field
+of the wrong type return `400` with an `error-description` field and no state change
+(Req 1.4, 4.5). Unknown paths → `404` with `error-description` (Req 1.5). Wrong method →
+`405` (Req 1.6). Missing/expired/invalid session on a protected route → `401` (Req 2.5).
+
+### Control Panel API (`/api/...`)
+
+| Path | Method | Request | Response |
+|---|---|---|---|
+| `/api/identities` | GET | — | `UserRecord[]` (identity picker source, Req 7.3) |
+| `/api/simulate/authorized` | POST | `{ "userId": 8 }` | `PushOutcome` (Req 6.1); `400` if `userId` missing (Req 6.6) |
+| `/api/simulate/denied` | POST | `{}` | `PushOutcome` (Req 6.2) |
+| `/api/simulate/keep-alive` | POST | `{}` | `PushOutcome` (Req 6.3) |
+
+### Interception API
+
+| Path | Method | Request | Response |
+|---|---|---|---|
+| `/api/interception` | GET | `?limit=<n>` (optional) | `InterceptionRecord[]`, newest-first (Req 8.5); empty array when none (Req 8.6 empty-state) |
+
+## Push / Webhook Payload Catalog
+
+The Monitor mechanism POSTs to `hostname:port/path/<endpoint>`. The Push Target base is
+composed from the `monitor` configuration block:
+
+```
+Push_Target(endpoint) = "http://" + monitor.hostname + ":" + monitor.port
+                        + "/" + monitor.path + "/" + endpoint
+```
+
+Example: `hostname=192.168.0.20`, `port=8000`, `path=api/notifications`, endpoint `dao`
+→ `http://192.168.0.20:8000/api/notifications/dao`. If `hostname`/`port`/`path` are unset
+(no target), the Push Engine records `no_target` and does not POST (Req 5.5).
+
+### 1. Authorized access — `POST .../dao` (event `7`)
+
+Dispatched by `simulateAuthorized(userId)` (Req 6.1). Grounded in the `dao` log-change
+shape:
+
+```json
+{
+  "object_changes": [
+    {
+      "object": "access_logs",
+      "type": "inserted",
+      "values": {
+        "id": "519", "time": "1532977090", "event": "7",
+        "device_id": "478435", "identifier_id": "0",
+        "user_id": "8", "portal_id": "1",
+        "identification_rule_id": "0", "card_value": "0", "log_type_id": "-1"
+      }
+    }
+  ],
+  "device_id": 478435
+}
+```
+
+Optionally, when `enable_photo_upload=1`, a companion `POST .../access_photo` carries the
+base64 JPEG identification photo.
+
+### 2. Denied access — `POST .../dao` (event `6`)
+
+Dispatched by `simulateDenied()` (Req 6.2). Same `dao` envelope with `event": "6"` and
+`user_id": "0"`.
+
+### 3. Keep-alive — `POST .../device_is_alive`
+
+Dispatched by `forceKeepAlive()` (Req 6.3). Grounded in the keep-alive shape:
+
+```json
+{ "access_logs": 0, "device_id": 6613047045004349, "time": 1739376235 }
+```
+
+### Additional catalog shapes (for completeness / future events)
+
+- `POST .../operation_mode` — `{ "operation_mode": { "mode": 0, "mode_name": "DEFAULT", "time": 1490271121, "last_offline": 1490261121, "exception_mode": "none" }, "device_id": 123456 }`
+- `POST .../door` — `{ "door": { "id": 1, "open": true }, "access_event_id": 15, "device_id": 1038508, "time": 1575475894 }`
+
