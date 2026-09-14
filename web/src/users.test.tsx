@@ -12,7 +12,7 @@ describe('Users Management via .fcgi (Issue #21)', () => {
     vi.restoreAllMocks();
   });
 
-  it('loads and lists users consuming POST /load_objects.fcgi with session query', async () => {
+  it('loads and lists users consuming POST /load_objects.fcgi?object=users with session query', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
       const urlString = String(url);
       if (urlString.includes('/load_objects.fcgi')) {
@@ -47,7 +47,7 @@ describe('Users Management via .fcgi (Issue #21)', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/load_objects.fcgi?session=auth-token-999'),
+      expect.stringContaining('/load_objects.fcgi?object=users&session=auth-token-999'),
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
@@ -56,7 +56,7 @@ describe('Users Management via .fcgi (Issue #21)', () => {
     );
   });
 
-  it('creates a new user consuming POST /create_objects.fcgi with session query and reloads list', async () => {
+  it('creates a new user consuming POST /create_objects.fcgi?object=users with session query and reloads list', async () => {
     let usersList = [{ id: 1, name: 'Carlos Alberto', registration: 'REG001' }];
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
@@ -109,7 +109,7 @@ describe('Users Management via .fcgi (Issue #21)', () => {
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining('/create_objects.fcgi?session=auth-token-999'),
+        expect.stringContaining('/create_objects.fcgi?object=users&session=auth-token-999'),
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
@@ -124,6 +124,56 @@ describe('Users Management via .fcgi (Issue #21)', () => {
     await waitFor(() => {
       expect(screen.getByText('Mariana Souza')).toBeInTheDocument();
       expect(screen.getByText('REG999')).toBeInTheDocument();
+    });
+  });
+
+  it('omits password field in payload if password input is blank', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      const urlString = String(url);
+      const method = init?.method ?? 'GET';
+
+      if (urlString.includes('/load_objects.fcgi')) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ users: [] }),
+        } as Response;
+      }
+
+      if (urlString.includes('/create_objects.fcgi') && method === 'POST') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ ids: [1] }),
+        } as Response;
+      }
+
+      return { ok: false, status: 404, text: async () => '' } as Response;
+    });
+
+    render(
+      <AuthProvider>
+        <MemoryRouter>
+          <UsersPage />
+        </MemoryRouter>
+      </AuthProvider>
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+    await userEvent.type(screen.getByLabelText(/nome/i), 'Sem Senha');
+    await userEvent.type(screen.getByLabelText(/matrícula/i), 'REG-NO-PASS');
+    await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/create_objects.fcgi?object=users'),
+        expect.objectContaining({
+          body: JSON.stringify({
+            object: 'users',
+            values: [{ name: 'Sem Senha', registration: 'REG-NO-PASS' }],
+          }),
+        })
+      );
     });
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFcgi } from '../hooks/useFcgi.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 
@@ -12,6 +12,18 @@ interface LoadUsersResponse {
   users?: UserItem[];
 }
 
+interface UserFormData {
+  name: string;
+  registration: string;
+  password: string;
+}
+
+const INITIAL_FORM_DATA: UserFormData = {
+  name: '',
+  registration: '',
+  password: '',
+};
+
 export function UsersPage() {
   const { fcgiFetch } = useFcgi();
   const { logout } = useAuth();
@@ -21,16 +33,14 @@ export function UsersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState('');
-  const [registration, setRegistration] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState<UserFormData>(INITIAL_FORM_DATA);
   const [submitting, setSubmitting] = useState(false);
 
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fcgiFetch<LoadUsersResponse>('/load_objects.fcgi', {
+      const data = await fcgiFetch<LoadUsersResponse>('/load_objects.fcgi?object=users', {
         method: 'POST',
         body: JSON.stringify({ object: 'users' }),
       });
@@ -51,23 +61,25 @@ export function UsersPage() {
     try {
       setSubmitting(true);
       setError(null);
-      await fcgiFetch('/create_objects.fcgi', {
+
+      const userPayload: Record<string, unknown> = {
+        name: formData.name,
+        registration: formData.registration,
+      };
+
+      if (formData.password.trim().length > 0) {
+        userPayload.password = formData.password;
+      }
+
+      await fcgiFetch('/create_objects.fcgi?object=users', {
         method: 'POST',
         body: JSON.stringify({
           object: 'users',
-          values: [
-            {
-              name,
-              registration,
-              password,
-            },
-          ],
+          values: [userPayload],
         }),
       });
 
-      setName('');
-      setRegistration('');
-      setPassword('');
+      setFormData(INITIAL_FORM_DATA);
       setShowModal(false);
       await loadUsers();
     } catch (err) {
@@ -185,8 +197,8 @@ export function UsersPage() {
                 <input
                   id="userName"
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   placeholder="Nome completo"
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
@@ -203,8 +215,8 @@ export function UsersPage() {
                 <input
                   id="userRegistration"
                   type="text"
-                  value={registration}
-                  onChange={(e) => setRegistration(e.target.value)}
+                  value={formData.registration}
+                  onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
                   required
                   placeholder="Ex: 12345"
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
@@ -221,8 +233,8 @@ export function UsersPage() {
                 <input
                   id="userPassword"
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="PIN numérico"
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />

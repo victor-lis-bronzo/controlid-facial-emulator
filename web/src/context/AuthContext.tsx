@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface AuthContextType {
   session: string | null;
   isAuthenticated: boolean;
-  login: (login: string, pass: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -24,13 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
-  const login = async (username: string, pass: string) => {
+  const login = async (username: string, password: string) => {
     const response = await fetch('/login.fcgi', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ login: username, password: pass }),
+      body: JSON.stringify({ login: username, password }),
     });
 
     if (!response.ok) {
@@ -44,12 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setSession(data.session);
-    localStorage.setItem(STORAGE_KEY, data.session);
   };
 
   const logout = () => {
     setSession(null);
-    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
