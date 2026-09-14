@@ -20,7 +20,7 @@ describe('AppRouter (WebGUI Foundation)', () => {
     expect(screen.getByRole('heading', { name: /login/i })).toBeInTheDocument();
   });
 
-  it('renders users view on /admin/users when authenticated', () => {
+  it('renders users view on /admin/users when authenticated', async () => {
     localStorage.setItem('controlid_session', 'test-session');
     render(
       <AuthProvider>
@@ -29,6 +29,6 @@ describe('AppRouter (WebGUI Foundation)', () => {
         </MemoryRouter>
       </AuthProvider>
     );
-    expect(screen.getByRole('heading', { name: /users/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /users/i })).toBeInTheDocument();
   });
 });

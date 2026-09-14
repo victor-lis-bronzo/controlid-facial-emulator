@@ -26,11 +26,21 @@ describe('Authentication flow (Issue #20)', () => {
   });
 
   it('authenticates via /login.fcgi, persists session to localStorage, and navigates to /admin/users', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify({ session: 'session-xyz-123' }),
-    } as Response);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/login.fcgi')) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ session: 'session-xyz-123' }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ users: [] }),
+      } as Response;
+    });
 
     render(
       <AuthProvider>
