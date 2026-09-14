@@ -74,6 +74,8 @@ const KNOWN_FCGI_ROUTES: Record<string, ReadonlyArray<'GET' | 'POST'>> = {
   '/modify_objects.fcgi': ['POST'],
   '/destroy_objects.fcgi': ['POST'],
   '/user_get_image.fcgi': ['GET', 'POST'],
+  '/user_set_image.fcgi': ['POST'],
+  '/user_destroy_image.fcgi': ['POST'],
   '/new_user_identified.fcgi': ['POST'],
 };
 
@@ -204,7 +206,7 @@ export async function buildApp(
   const requireSession = makeRequireSession(container);
   registerSessionRoutes(app, container, resolved);
   registerConfigRoutes(app, container, requireSession);
-  registerObjectRoutes(app, container, resolved, requireSession);
+  await registerObjectRoutes(app, container, resolved, requireSession);
   registerControlPanelRoutes(app, container);
   registerInterceptionRoutes(app, container);
 

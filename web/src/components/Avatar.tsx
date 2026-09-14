@@ -10,6 +10,12 @@ interface AvatarProps {
    * upload/delete (the URL is otherwise stable, keyed only by user id).
    */
   refreshToken?: number;
+  /**
+   * Session token appended as `?session=` when the caller's `user_get_image.fcgi`
+   * route requires it (the `.fcgi` track does; the admin-panel track's reads are
+   * open and omits this prop).
+   */
+  session?: string;
 }
 
 /** Derive up to two uppercase initials from a display name. */
@@ -30,13 +36,14 @@ function initialsOf(name: string): string {
  * otherwise an initials placeholder (Req 3.4). The emulator performs no
  * biometric processing — this is display only.
  */
-export function Avatar({ userId, hasPhoto, name, refreshToken }: AvatarProps) {
+export function Avatar({ userId, hasPhoto, name, refreshToken, session }: AvatarProps) {
   if (hasPhoto) {
     const bust = refreshToken !== undefined ? `&_=${String(refreshToken)}` : '';
+    const sessionParam = session ? `&session=${encodeURIComponent(session)}` : '';
     return (
       <img
         className="avatar avatar--photo"
-        src={`/user_get_image.fcgi?user_id=${String(userId)}${bust}`}
+        src={`/user_get_image.fcgi?user_id=${String(userId)}${bust}${sessionParam}`}
         alt={`Photo of ${name}`}
         width={40}
         height={40}

@@ -16,7 +16,14 @@
  *   - create/load_objects incl. empty result (4.1, 4.2) and bad filter → 400 (4.5)
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { buildTestApp, login, type TestApp } from '../test-helpers.js';
+import {
+  buildTestApp,
+  jpegBytes,
+  login,
+  multipartFile,
+  pngBytes,
+  type TestApp,
+} from '../test-helpers.js';
 
 let harness: TestApp | undefined;
 
@@ -294,3 +301,278 @@ describe('new_user_identified.fcgi (device callback)', () => {
     expect(Array.isArray(body.result.actions)).toBe(true);
   });
 });
+
+describe(
+  'Facial photo (.fcgi) - user_set_image / user_get_image / ' +
+    'user_destroy_image (Issue #26)',
+  () => {
+    async function createUser(h: TestApp, token: string): Promise<number> {
+      const response = await h.app.inject({
+        method: 'POST',
+        url: `/create_objects.fcgi?session=${token}`,
+        payload: {
+          object: 'users',
+          values: [{ registration: '9001', name: 'Face User', password: '1234' }],
+        },
+        headers: jsonHeaders(),
+      });
+      const created = response.json() as { ids: number[] };
+      return created.ids[0];
+    }
+
+    it('uploads a JPEG then round-trips it via user_get_image.fcgi', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const bytes = jpegBytes();
+      const { payload, headers } = multipartFile(bytes, 'face.jpg', 'image/jpeg', {
+        user_id: String(userId),
+      });
+      const uploadResponse = await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+      expect(uploadResponse.statusCode).toBe(200);
+      expect(uploadResponse.json()).toEqual({ success: true });
+
+      const getResponse = await harness.app.inject({
+        method: 'GET',
+        url: `/user_get_image.fcgi?user_id=${String(userId)}&session=${token}`,
+      });
+      expect(getResponse.statusCode).toBe(200);
+      expect(getResponse.headers['content-type']).toContain('image/jpeg');
+      expect(Buffer.from(getResponse.rawPayload).equals(bytes)).toBe(true);
+    });
+
+    it('uploads a PNG then round-trips it via user_get_image.fcgi', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const bytes = pngBytes();
+      const { payload, headers } = multipartFile(bytes, 'face.png', 'image/png', {
+        user_id: String(userId),
+      });
+      const uploadResponse = await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+      expect(uploadResponse.statusCode).toBe(200);
+
+      const getResponse = await harness.app.inject({
+        method: 'GET',
+        url: `/user_get_image.fcgi?user_id=${String(userId)}&session=${token}`,
+      });
+      expect(getResponse.statusCode).toBe(200);
+      expect(getResponse.headers['content-type']).toContain('image/png');
+      expect(Buffer.from(getResponse.rawPayload).equals(bytes)).toBe(true);
+    });
+
+    it('user_get_image.fcgi for a freshly-created user with no photo → 404', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const response = await harness.app.inject({
+        method: 'GET',
+        url: `/user_get_image.fcgi?user_id=${String(userId)}&session=${token}`,
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('user_destroy_image.fcgi removes the photo; subsequent GET → 404', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const { payload, headers } = multipartFile(jpegBytes(), 'face.jpg', 'image/jpeg', {
+        user_id: String(userId),
+      });
+      await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+
+      const destroyResponse = await harness.app.inject({
+        method: 'POST',
+        url: `/user_destroy_image.fcgi?session=${token}`,
+        payload: { user_id: userId },
+        headers: jsonHeaders(),
+      });
+      expect(destroyResponse.statusCode).toBe(200);
+      expect(destroyResponse.json()).toEqual({ success: true });
+
+      const getResponse = await harness.app.inject({
+        method: 'GET',
+        url: `/user_get_image.fcgi?user_id=${String(userId)}&session=${token}`,
+      });
+      expect(getResponse.statusCode).toBe(404);
+    });
+
+    it('user_set_image.fcgi with a disallowed declared MIME → 400', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const { payload, headers } = multipartFile(jpegBytes(), 'face.gif', 'image/gif', {
+        user_id: String(userId),
+      });
+      const response = await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+      expect(response.statusCode).toBe(400);
+      const body = response.json() as Record<string, string>;
+      expect(body['error-description']).toContain('JPEG, PNG');
+    });
+
+    it('user_set_image.fcgi with declared/actual MIME mismatch (magic-byte sniff) → 400', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      // Declares image/jpeg but sends PNG magic bytes.
+      const { payload, headers } = multipartFile(pngBytes(), 'face.jpg', 'image/jpeg', {
+        user_id: String(userId),
+      });
+      const response = await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('user_set_image.fcgi with a payload over 5 MB → 413', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const { payload, headers } = multipartFile(
+        jpegBytes(6 * 1024 * 1024),
+        'face.jpg',
+        'image/jpeg',
+        { user_id: String(userId) },
+      );
+      const response = await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+      expect(response.statusCode).toBe(413);
+      const body = response.json() as Record<string, string>;
+      expect(body['error-description']).toContain('5 MB');
+    });
+
+    it('user_set_image.fcgi / user_destroy_image.fcgi without a session → 401', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const { payload, headers } = multipartFile(jpegBytes(), 'face.jpg', 'image/jpeg', {
+        user_id: String(userId),
+      });
+      const uploadResponse = await harness.app.inject({
+        method: 'POST',
+        url: '/user_set_image.fcgi',
+        payload,
+        headers,
+      });
+      expect(uploadResponse.statusCode).toBe(401);
+
+      const destroyResponse = await harness.app.inject({
+        method: 'POST',
+        url: '/user_destroy_image.fcgi',
+        payload: { user_id: userId },
+        headers: jsonHeaders(),
+      });
+      expect(destroyResponse.statusCode).toBe(401);
+    });
+
+    it('user_set_image.fcgi / user_destroy_image.fcgi for a non-existent user_id → 404', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+
+      const { payload, headers } = multipartFile(jpegBytes(), 'face.jpg', 'image/jpeg', {
+        user_id: '999999',
+      });
+      const uploadResponse = await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+      expect(uploadResponse.statusCode).toBe(404);
+
+      const destroyResponse = await harness.app.inject({
+        method: 'POST',
+        url: `/user_destroy_image.fcgi?session=${token}`,
+        payload: { user_id: 999999 },
+        headers: jsonHeaders(),
+      });
+      expect(destroyResponse.statusCode).toBe(404);
+    });
+
+    it('user_set_image.fcgi with a missing/non-integer user_id → 400', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+
+      const { payload, headers } = multipartFile(jpegBytes(), 'face.jpg', 'image/jpeg', {
+        user_id: 'not-a-number',
+      });
+      const response = await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload,
+        headers,
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('re-uploading overwrites the prior photo', async () => {
+      harness = await buildTestApp();
+      const token = await login(harness.app);
+      const userId = await createUser(harness, token);
+
+      const firstUpload = multipartFile(jpegBytes(), 'face.jpg', 'image/jpeg', {
+        user_id: String(userId),
+      });
+      await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload: firstUpload.payload,
+        headers: firstUpload.headers,
+      });
+
+      const pngBody = pngBytes();
+      const secondUpload = multipartFile(pngBody, 'face.png', 'image/png', {
+        user_id: String(userId),
+      });
+      await harness.app.inject({
+        method: 'POST',
+        url: `/user_set_image.fcgi?session=${token}`,
+        payload: secondUpload.payload,
+        headers: secondUpload.headers,
+      });
+
+      const getResponse = await harness.app.inject({
+        method: 'GET',
+        url: `/user_get_image.fcgi?user_id=${String(userId)}&session=${token}`,
+      });
+      expect(getResponse.statusCode).toBe(200);
+      expect(getResponse.headers['content-type']).toContain('image/png');
+      expect(Buffer.from(getResponse.rawPayload).equals(pngBody)).toBe(true);
+    });
+  },
+);

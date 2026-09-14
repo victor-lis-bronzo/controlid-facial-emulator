@@ -33,19 +33,16 @@ import type {
   preHandlerHookHandler,
 } from 'fastify';
 import type { Container } from '../../composition/container.js';
-import type { PhotoMime } from '../../repositories/photo-storage.js';
 import type { TimeRangeWrite } from '../../repositories/time-zone-repository.js';
 import type { AccessLogFilter } from '../../repositories/access-log-repository.js';
 import { BadRequestError, HttpError } from '../errors.js';
-
-/** Maximum accepted facial-photo size in bytes (5 MB) (Req 3.1, 3.3). */
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-
-/** The two accepted image MIME types (Req 3.2). */
-const ACCEPTED_MIMES: ReadonlySet<string> = new Set(['image/jpeg', 'image/png']);
-
-/** Human-readable list of accepted photo formats, used in the 400 message. */
-const ACCEPTED_FORMATS_MESSAGE = 'Accepted formats: JPEG, PNG.';
+import {
+  ACCEPTED_FORMATS_MESSAGE,
+  ACCEPTED_MIMES,
+  MAX_PHOTO_BYTES,
+  isFileTooLargeError,
+  sniffImageMime,
+} from '../photo-validation.js';
 
 /**
  * Parse and validate a `:id` route param as a positive integer, throwing a
@@ -111,39 +108,6 @@ function toTimeRanges(value: unknown): TimeRangeWrite[] {
       endTime: typeof record.endTime === 'string' ? record.endTime : '',
     };
   });
-}
-
-/**
- * Sniff the leading magic bytes to confirm the declared image type, returning
- * the detected MIME or `null` when the bytes match neither JPEG nor PNG. This
- * defends against a spoofed `mimetype` (Req 3.2).
- *
- *   - JPEG: `FF D8 FF`
- *   - PNG:  `89 50 4E 47`
- */
-function sniffImageMime(bytes: Buffer): PhotoMime | null {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return 'image/jpeg';
-  }
-  if (
-    bytes.length >= 4 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) {
-    return 'image/png';
-  }
-  return null;
-}
-
-/** True for a thrown value carrying the multipart oversize error code. */
-function isFileTooLargeError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    (error as { code?: unknown }).code === 'FST_REQ_FILE_TOO_LARGE'
-  );
 }
 
 /**

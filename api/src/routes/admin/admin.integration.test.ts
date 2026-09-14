@@ -11,7 +11,14 @@
  * counts + recent-logs shape (Req 2–10, 14.2).
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildTestApp, loginSession, type TestApp } from '../test-helpers.js';
+import {
+  buildTestApp,
+  jpegBytes,
+  loginSession,
+  multipartFile,
+  pngBytes,
+  type TestApp,
+} from '../test-helpers.js';
 
 let harness: TestApp | undefined;
 
@@ -33,51 +40,6 @@ async function setup(): Promise<{ h: TestApp; session: string }> {
 function errorDescription(response: { json(): unknown }): string {
   const body = response.json() as Record<string, unknown>;
   return String(body['error-description'] ?? '');
-}
-
-/** A minimal valid JPEG buffer (magic bytes FF D8 FF + padding). */
-function jpegBytes(size = 16): Buffer {
-  const buf = Buffer.alloc(size, 0);
-  buf[0] = 0xff;
-  buf[1] = 0xd8;
-  buf[2] = 0xff;
-  buf[3] = 0xe0;
-  return buf;
-}
-
-/** A minimal valid PNG buffer (magic bytes 89 50 4E 47 + padding). */
-function pngBytes(size = 16): Buffer {
-  const buf = Buffer.alloc(size, 0);
-  buf[0] = 0x89;
-  buf[1] = 0x50;
-  buf[2] = 0x4e;
-  buf[3] = 0x47;
-  return buf;
-}
-
-/**
- * Build a raw multipart/form-data body with a single file part. `app.inject`
- * sends the provided payload+headers verbatim, so we hand-assemble the body to
- * exercise `@fastify/multipart` end-to-end.
- */
-function multipartFile(
-  bytes: Buffer,
-  filename: string,
-  contentType: string,
-): { payload: Buffer; headers: Record<string, string> } {
-  const boundary = '----adminTestBoundary1234567890';
-  const head = Buffer.from(
-    `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-      `Content-Type: ${contentType}\r\n\r\n`,
-    'utf8',
-  );
-  const tail = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8');
-  const payload = Buffer.concat([head, bytes, tail]);
-  return {
-    payload,
-    headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
-  };
 }
 
 // ---------------------------------------------------------------------------

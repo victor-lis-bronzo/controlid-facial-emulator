@@ -15,6 +15,13 @@
  *     with `error-description` when the user has no stored image (documented
  *     choice: the emulator ships no image bytes, so this returns 404; see the
  *     UserRepository stub note).
+ *   - `POST /user_set_image.fcgi` (multipart/form-data, `user_id` in query or
+ *     as a form field, file part named `file`) → `{ success: true }`; `400` for
+ *     a missing/invalid `user_id`, missing file part, disallowed declared MIME,
+ *     or a magic-byte mismatch; `413` over the 5 MB cap; `404` for an unknown
+ *     `user_id` (Issue #26).
+ *   - `POST /user_destroy_image.fcgi` (`user_id` in query or body) →
+ *     `{ success: true }`; `400`/`404` as above (Issue #26).
  *   - `POST /new_user_identified.fcgi` (x-www-form-urlencoded, unprotected —
  *     models the device→server callback): parses the form fields and returns the
  *     "Mensagem de Retorno" `{ result: {...} }`, echoing user_id/user_name.
@@ -23,6 +30,7 @@
  * The image route is protected; `new_user_identified` is unprotected (it models
  * the device's own callback to a server).
  */
+import fastifyMultipart from '@fastify/multipart';
 import type {
   FastifyInstance,
   FastifyReply,
@@ -41,6 +49,25 @@ import {
   type NewUserIdentifiedResponse,
 } from '../../shared/index.js';
 import { BadRequestError, HttpError } from '../errors.js';
+import {
+  ACCEPTED_FORMATS_MESSAGE,
+  ACCEPTED_MIMES,
+  MAX_PHOTO_BYTES,
+  isFileTooLargeError,
+  sniffImageMime,
+} from '../photo-validation.js';
+
+/** Parse a `user_id` value (from query or body) as a positive integer, or throw `400`. */
+function parseUserId(rawUserId: unknown): number {
+  if (rawUserId === undefined || rawUserId === '') {
+    throw new BadRequestError("Missing required parameter: 'user_id'.");
+  }
+  const userId = Number(rawUserId);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new BadRequestError("Parameter 'user_id' must be a positive integer.");
+  }
+  return userId;
+}
 
 /** Require and return a non-empty string `object` field, or throw `400`. */
 function requireObject(body: Record<string, unknown>): string {
@@ -69,12 +96,21 @@ function requireObjectMap(
  * Register the object/log/biometry routes. `requireSession` guards every route
  * except `new_user_identified` (the device callback).
  */
-export function registerObjectRoutes(
+export async function registerObjectRoutes(
   app: FastifyInstance,
   container: Container,
   resolved: ResolvedConfig,
   requireSession: preHandlerHookHandler,
-): void {
+): Promise<void> {
+  // Multipart, scoped to this registration, capped at 5 MB / single file. See
+  // `admin-routes.ts`'s identical registration: Fastify decorators from one
+  // `register()` call do not cross into a route declared in a different one,
+  // so `user_set_image.fcgi` needs its own scoped registration.
+  await app.register(fastifyMultipart, {
+    limits: { fileSize: MAX_PHOTO_BYTES, files: 1 },
+    throwFileSizeLimit: true,
+  });
+
   app.post(
     '/create_objects.fcgi',
     { preHandler: requireSession },
@@ -158,13 +194,7 @@ export function registerObjectRoutes(
     const body = (request.body ?? {}) as Record<string, unknown>;
     const rawUserId =
       query.user_id !== undefined ? query.user_id : body.user_id;
-    if (rawUserId === undefined || rawUserId === '') {
-      throw new BadRequestError("Missing required parameter: 'user_id'.");
-    }
-    const userId = Number(rawUserId);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      throw new BadRequestError("Parameter 'user_id' must be a positive integer.");
-    }
+    const userId = parseUserId(rawUserId);
 
     const image = await container.users.getImageWithMime(userId);
     if (image === null) {
@@ -181,6 +211,71 @@ export function registerObjectRoutes(
 
   app.get('/user_get_image.fcgi', { preHandler: requireSession }, userGetImageHandler);
   app.post('/user_get_image.fcgi', { preHandler: requireSession }, userGetImageHandler);
+
+  app.post(
+    '/user_set_image.fcgi',
+    { preHandler: requireSession },
+    async (request: FastifyRequest, reply: FastifyReply): Promise<{ success: true }> => {
+      const part = await request.file();
+      if (part === undefined) {
+        throw new BadRequestError('Missing file part in multipart upload.');
+      }
+
+      // `request.file()` consumes the whole multipart stream, so any plain
+      // text fields (like `user_id`) sent alongside the file are available on
+      // `part.fields`. A `user_id` query param takes precedence when present.
+      const query = (request.query ?? {}) as Record<string, unknown>;
+      const fields = part.fields as Record<string, { value?: unknown } | undefined>;
+      const rawUserId =
+        query.user_id !== undefined ? query.user_id : fields.user_id?.value;
+      const userId = parseUserId(rawUserId);
+
+      // Reject an unacceptable declared MIME up front. We still sniff the
+      // bytes below to defend against a spoofed content type.
+      if (!ACCEPTED_MIMES.has(part.mimetype)) {
+        throw new BadRequestError(ACCEPTED_FORMATS_MESSAGE);
+      }
+
+      // Buffer the part. When it exceeds the 5 MB cap the plugin throws
+      // FST_REQ_FILE_TOO_LARGE (413).
+      let bytes: Buffer;
+      try {
+        bytes = await part.toBuffer();
+      } catch (error) {
+        if (isFileTooLargeError(error)) {
+          throw new HttpError(413, 'Facial photo must not exceed 5 MB.');
+        }
+        throw error;
+      }
+
+      // Sniff magic bytes; a mismatch → 400 and nothing is written.
+      const sniffed = sniffImageMime(bytes);
+      if (sniffed === null) {
+        throw new BadRequestError(ACCEPTED_FORMATS_MESSAGE);
+      }
+
+      // Confirm the user exists (404 otherwise) then store.
+      await container.userAdmin.setPhoto(userId, bytes, sniffed);
+      reply.type('application/json');
+      return { success: true };
+    },
+  );
+
+  app.post(
+    '/user_destroy_image.fcgi',
+    { preHandler: requireSession },
+    async (request: FastifyRequest, reply: FastifyReply): Promise<{ success: true }> => {
+      const query = (request.query ?? {}) as Record<string, unknown>;
+      const body = (request.body ?? {}) as Record<string, unknown>;
+      const rawUserId =
+        query.user_id !== undefined ? query.user_id : body.user_id;
+      const userId = parseUserId(rawUserId);
+
+      await container.userAdmin.deletePhoto(userId);
+      reply.type('application/json');
+      return { success: true };
+    },
+  );
 
   // Device→server online-identification callback ("Mensagem de Retorno").
   // Unprotected: it models a call the device makes TO a server, so it does not

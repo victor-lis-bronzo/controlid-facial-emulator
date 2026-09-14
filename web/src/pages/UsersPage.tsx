@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFcgi } from '../hooks/useFcgi.ts';
+import { useAuth } from '../context/AuthContext.tsx';
+import { Avatar } from '../components/Avatar.tsx';
+
+const ACCEPTED_PHOTO_MIMES = ['image/jpeg', 'image/png'];
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 interface UserItem {
   id: number;
   name: string;
   registration: string;
+  image_path: string | null;
 }
 
 interface LoadUsersResponse {
@@ -24,7 +30,8 @@ const INITIAL_FORM_DATA: UserFormData = {
 };
 
 export function UsersPage() {
-  const { fcgiFetch } = useFcgi();
+  const { fcgiFetch, fcgiUpload } = useFcgi();
+  const { session } = useAuth();
 
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +47,11 @@ export function UsersPage() {
 
   const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
   const [submittingDelete, setSubmittingDelete] = useState(false);
+
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [removingPhoto, setRemovingPhoto] = useState(false);
+  const [photoRefreshTokens, setPhotoRefreshTokens] = useState<Record<number, number>>({});
 
   const loadUsers = useCallback(async () => {
     try {
@@ -101,6 +113,7 @@ export function UsersPage() {
       registration: user.registration,
       password: '',
     });
+    setPhotoError(null);
   };
 
   const handleEditUser = async (e: React.FormEvent) => {
@@ -135,6 +148,62 @@ export function UsersPage() {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar usuário');
     } finally {
       setSubmittingEdit(false);
+    }
+  };
+
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !editingUser) return;
+
+    if (!ACCEPTED_PHOTO_MIMES.includes(file.type)) {
+      setPhotoError('Formato inválido. Aceito apenas JPEG ou PNG.');
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError('A foto não pode exceder 5 MB.');
+      return;
+    }
+
+    const userId = editingUser.id;
+    try {
+      setUploadingPhoto(true);
+      setPhotoError(null);
+
+      const body = new FormData();
+      body.append('user_id', String(userId));
+      body.append('file', file);
+      await fcgiUpload('/user_set_image.fcgi', body);
+
+      setPhotoRefreshTokens((prev) => ({ ...prev, [userId]: Date.now() }));
+      setEditingUser((prev) => (prev ? { ...prev, image_path: 'photo' } : prev));
+      await loadUsers();
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Erro ao enviar foto');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!editingUser) return;
+    const userId = editingUser.id;
+    try {
+      setRemovingPhoto(true);
+      setPhotoError(null);
+
+      await fcgiFetch('/user_destroy_image.fcgi', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      setPhotoRefreshTokens((prev) => ({ ...prev, [userId]: Date.now() }));
+      setEditingUser((prev) => (prev ? { ...prev, image_path: null } : prev));
+      await loadUsers();
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Erro ao remover foto');
+    } finally {
+      setRemovingPhoto(false);
     }
   };
 
@@ -198,6 +267,7 @@ export function UsersPage() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-800 bg-slate-900/50 text-xs uppercase tracking-wider text-slate-400">
                   <tr>
+                    <th className="px-6 py-3.5 font-semibold">Foto</th>
                     <th className="px-6 py-3.5 font-semibold">ID</th>
                     <th className="px-6 py-3.5 font-semibold">Nome</th>
                     <th className="px-6 py-3.5 font-semibold">Matrícula</th>
@@ -207,6 +277,15 @@ export function UsersPage() {
                 <tbody className="divide-y divide-slate-800/60">
                   {users.map((user) => (
                     <tr key={user.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="px-6 py-4">
+                        <Avatar
+                          userId={user.id}
+                          hasPhoto={Boolean(user.image_path)}
+                          name={user.name}
+                          refreshToken={photoRefreshTokens[user.id]}
+                          session={session ?? undefined}
+                        />
+                      </td>
                       <td className="px-6 py-4 font-mono text-xs text-slate-500">{user.id}</td>
                       <td className="px-6 py-4 font-medium text-white">{user.name}</td>
                       <td className="px-6 py-4 font-mono text-xs text-slate-300">
@@ -391,6 +470,48 @@ export function UsersPage() {
                   placeholder="Deixe em branco para manter a atual"
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
+              </div>
+
+              <div>
+                <span className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+                  Foto de Rosto
+                </span>
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    userId={editingUser.id}
+                    hasPhoto={Boolean(editingUser.image_path)}
+                    name={editingUser.name}
+                    refreshToken={photoRefreshTokens[editingUser.id]}
+                    session={session ?? undefined}
+                  />
+                  <label
+                    htmlFor="editUserPhoto"
+                    className="cursor-pointer rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
+                  >
+                    {uploadingPhoto ? 'Enviando...' : 'Selecionar Foto'}
+                  </label>
+                  <input
+                    id="editUserPhoto"
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    onChange={handlePhotoSelected}
+                    disabled={uploadingPhoto}
+                    className="sr-only"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    disabled={editingUser.image_path === null || removingPhoto}
+                    className="text-xs font-semibold text-rose-400 hover:text-rose-300 px-2.5 py-1 rounded border border-rose-500/30 hover:bg-rose-500/10 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                  >
+                    {removingPhoto ? 'Removendo...' : 'Remover Foto'}
+                  </button>
+                </div>
+                {photoError && (
+                  <div className="mt-2 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400">
+                    {photoError}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-2">

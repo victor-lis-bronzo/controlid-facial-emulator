@@ -505,4 +505,410 @@ describe('Users Management via .fcgi (Issue #21)', () => {
       });
     });
   });
+
+  describe('Facial Photo Management via POST /user_set_image.fcgi & GET /user_get_image.fcgi (Issue #26)', () => {
+    it('renders a photo avatar for a user with image_path and initials for a user without one', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [
+                  { id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: 'photos/1.jpg' },
+                  { id: 2, name: 'Ana Carolina', registration: 'REG002', image_path: null },
+                ],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('img', { name: /photo of carlos alberto/i })).toBeInTheDocument();
+      });
+      expect(screen.getByText('AC')).toBeInTheDocument();
+
+      // The avatar's <img src> must carry the session token: user_get_image.fcgi
+      // is a protected route (requireSession), so an unauthenticated request 401s.
+      expect(screen.getByRole('img', { name: /photo of carlos alberto/i })).toHaveAttribute(
+        'src',
+        expect.stringContaining('session=auth-token-999')
+      );
+    });
+
+    it('shows the photo controls in the edit modal, "Remover Foto" disabled without a photo', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: null }],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+
+      expect(screen.getByRole('button', { name: /remover foto/i })).toBeDisabled();
+    });
+
+    it('enables "Remover Foto" in the edit modal when the user already has a photo', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [
+                  { id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: 'photos/1.jpg' },
+                ],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+
+      expect(screen.getByRole('button', { name: /remover foto/i })).toBeEnabled();
+    });
+
+    it('uploads a valid JPEG via POST /user_set_image.fcgi with the session query param and refreshes the avatar', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: null }],
+              }),
+          } as Response;
+        }
+        if (urlString.includes('/user_set_image.fcgi') && method === 'POST') {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ success: true }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+
+      const file = new File([new Uint8Array([1, 2, 3])], 'face.jpg', { type: 'image/jpeg' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, file);
+
+      await waitFor(() => {
+        const call = fetchSpy.mock.calls.find(([u]) => String(u).includes('/user_set_image.fcgi'));
+        expect(call).toBeDefined();
+        const [uploadUrl, uploadInit] = call!;
+        expect(String(uploadUrl)).toContain('session=auth-token-999');
+        expect(uploadInit?.method).toBe('POST');
+        const body = uploadInit?.body as FormData;
+        expect(body).toBeInstanceOf(FormData);
+        expect(body.get('user_id')).toBe('1');
+        expect(body.get('file')).toBeInstanceOf(File);
+      });
+
+      expect(screen.queryByText(/formato inválido|não pode exceder/i)).not.toBeInTheDocument();
+    });
+
+    it('rejects an oversized file client-side without calling fetch', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: null }],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+
+      const oversized = new File([new Uint8Array(6 * 1024 * 1024)], 'big.jpg', {
+        type: 'image/jpeg',
+      });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, oversized);
+
+      expect(await screen.findByText(/não pode exceder 5 mb/i)).toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('/user_set_image.fcgi'),
+        expect.anything()
+      );
+    });
+
+    it('rejects a disallowed mime type client-side without calling fetch', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: null }],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+
+      // `applyAccept: false` bypasses the file input's `accept` filtering, so
+      // this exercises the component's own client-side validation as a
+      // defense-in-depth check (e.g. a drag-and-drop source bypassing the
+      // native file picker's `accept` filter).
+      const user = userEvent.setup({ applyAccept: false });
+      const gif = new File([new Uint8Array([1, 2, 3])], 'face.gif', { type: 'image/gif' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await user.upload(fileInput, gif);
+
+      expect(await screen.findByText(/formato inválido/i)).toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('/user_set_image.fcgi'),
+        expect.anything()
+      );
+    });
+
+    it('surfaces a server-side upload error (e.g. spoofed magic bytes rejected by the backend)', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: null }],
+              }),
+          } as Response;
+        }
+        if (urlString.includes('/user_set_image.fcgi') && method === 'POST') {
+          return {
+            ok: false,
+            status: 400,
+            text: async () => JSON.stringify({ 'error-description': 'Accepted formats: JPEG, PNG.' }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+
+      const file = new File([new Uint8Array([1, 2, 3])], 'face.jpg', { type: 'image/jpeg' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, file);
+
+      expect(await screen.findByText(/accepted formats: jpeg, png/i)).toBeInTheDocument();
+    });
+
+    it('removes the photo via POST /user_destroy_image.fcgi and reverts to the initials placeholder', async () => {
+      let hasPhoto = true;
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [
+                  {
+                    id: 1,
+                    name: 'Carlos Alberto',
+                    registration: 'REG001',
+                    image_path: hasPhoto ? 'photos/1.jpg' : null,
+                  },
+                ],
+              }),
+          } as Response;
+        }
+        if (urlString.includes('/user_destroy_image.fcgi') && method === 'POST') {
+          hasPhoto = false;
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ success: true }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('img', { name: /photo of carlos alberto/i })).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+      await userEvent.click(screen.getByRole('button', { name: /remover foto/i }));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/user_destroy_image.fcgi?session=auth-token-999'),
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ user_id: 1 }),
+          })
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByText('CA').length).toBeGreaterThan(0);
+        expect(screen.queryByRole('img', { name: /photo of carlos alberto/i })).not.toBeInTheDocument();
+      });
+    });
+
+    it('surfaces an error and keeps the photo displayed when photo removal fails', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [
+                  { id: 1, name: 'Carlos Alberto', registration: 'REG001', image_path: 'photos/1.jpg' },
+                ],
+              }),
+          } as Response;
+        }
+        if (urlString.includes('/user_destroy_image.fcgi') && method === 'POST') {
+          return {
+            ok: false,
+            status: 404,
+            text: async () => JSON.stringify({ 'error-description': 'No image stored.' }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('img', { name: /photo of carlos alberto/i })).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+      await userEvent.click(screen.getByRole('button', { name: /remover foto/i }));
+
+      expect(await screen.findByText(/no image stored/i)).toBeInTheDocument();
+      expect(screen.getAllByRole('img', { name: /photo of carlos alberto/i }).length).toBeGreaterThan(0);
+    });
+  });
 });

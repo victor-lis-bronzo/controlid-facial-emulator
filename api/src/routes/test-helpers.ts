@@ -130,3 +130,61 @@ export async function login(app: FastifyInstance): Promise<string> {
 export async function loginSession(app: FastifyInstance): Promise<string> {
   return login(app);
 }
+
+/** A minimal valid JPEG buffer (magic bytes FF D8 FF + padding). */
+export function jpegBytes(size = 16): Buffer {
+  const buf = Buffer.alloc(size, 0);
+  buf[0] = 0xff;
+  buf[1] = 0xd8;
+  buf[2] = 0xff;
+  buf[3] = 0xe0;
+  return buf;
+}
+
+/** A minimal valid PNG buffer (magic bytes 89 50 4E 47 + padding). */
+export function pngBytes(size = 16): Buffer {
+  const buf = Buffer.alloc(size, 0);
+  buf[0] = 0x89;
+  buf[1] = 0x50;
+  buf[2] = 0x4e;
+  buf[3] = 0x47;
+  return buf;
+}
+
+/**
+ * Build a raw multipart/form-data body with a single `file` part, plus
+ * optional extra plain-text fields (e.g. `user_id`). `app.inject` sends the
+ * provided payload+headers verbatim, so callers hand-assemble the body to
+ * exercise `@fastify/multipart` end-to-end.
+ */
+export function multipartFile(
+  bytes: Buffer,
+  filename: string,
+  contentType: string,
+  extraFields: Record<string, string> = {},
+): { payload: Buffer; headers: Record<string, string> } {
+  const boundary = '----adminTestBoundary1234567890';
+  const parts: Buffer[] = [];
+  for (const [name, value] of Object.entries(extraFields)) {
+    parts.push(
+      Buffer.from(
+        `--${boundary}\r\n` +
+          `Content-Disposition: form-data; name="${name}"\r\n\r\n` +
+          `${value}\r\n`,
+        'utf8',
+      ),
+    );
+  }
+  const head = Buffer.from(
+    `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+      `Content-Type: ${contentType}\r\n\r\n`,
+    'utf8',
+  );
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8');
+  const payload = Buffer.concat([...parts, head, bytes, tail]);
+  return {
+    payload,
+    headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+  };
+}
