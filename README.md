@@ -11,10 +11,13 @@ watch the emulator dispatch webhooks to your server, and inspect every request a
 response in a live interception log — no scarce hardware and no external HTTP client
 required.
 
-> **Fidelity source.** Endpoint paths, methods, request field names, response shapes, and
+> **Fidelity sources.** Endpoint paths, methods, request field names, response shapes, and
 > webhook payloads are grounded in the official
-> [Control-iD Access API documentation](https://www.controlid.com.br/docs/access-api-pt/).
-> That documentation is the single source of truth for behavior; see
+> [Control-iD Access API documentation](https://www.controlid.com.br/docs/access-api-pt/)
+> and the official
+> [Control-iD integration examples](https://github.com/controlid/integracao) repository
+> (see its `Controle de Acesso` folder, including the NodeJS Push, Monitor, and
+> Online-server samples). Those are the single sources of truth for behavior; see
 > [Documented divergences](#documented-divergences) for where the emulator deliberately
 > simplifies the hardware.
 
@@ -171,6 +174,85 @@ is recorded in the interception log as `no_target` and no POST is made.
 
 ---
 
+## Admin panel
+
+The control panel at <http://localhost:8080/admin> is a single-page application that, in
+addition to the **Simulate** and **Interception Log** capabilities described above, provides
+a full device-style administration experience modeled on the Control-iD / iDSecure device
+admin UI. Navigate between sections in the panel without a page reload:
+
+- **Dashboard** — aggregate counts of Users, Groups, Access Rules, and Portals plus the 10
+  most recent access-log records.
+- **Users** — create, edit, and delete users (registration, name, optional PIN, group
+  membership) and upload/remove a **facial photo** shown as the user's avatar.
+- **Groups** — named collections of users, used to compose access rules.
+- **Time Zones** — named weekly schedules (Portuguese *horários*) built from time ranges
+  (weekdays + `HH:MM`–`HH:MM`).
+- **Access Rules** — compositions that associate one or more Groups, Time Zones, and Portals.
+- **Portals** — the doors / access points the device controls.
+- **Access Logs** — a filterable, newest-first view of access events (by user, event type,
+  and date range).
+- **Simulate** and **Interception Log** — the existing capabilities, preserved unchanged.
+
+### Creating a user (and using it in Simulate)
+
+Create a user from the **Users** section (or via the API below). Once created, the user
+immediately appears in the **Simulate** section's identity picker for authorized-access
+events, and you can attach a facial photo to it. The stored photo is served back through the
+existing `user_get_image.fcgi` endpoint and rendered as the user's avatar.
+
+### Admin API (`/api/admin/...`)
+
+The panel is backed by the emulator's own REST admin surface under `/api/admin` (distinct
+from the Control-iD `.fcgi` compatibility surface). **Reads are open; every mutation
+(create/update/delete and photo upload/delete) requires a valid session token** obtained from
+`POST /login.fcgi` and passed as `?session=<token>` (the same session mechanism the `.fcgi`
+routes use; token TTL is 3600 seconds). A missing/expired/invalid session on a mutation
+returns `401` and persists no change.
+
+| Method                | Path                             | Auth | Purpose                                             |
+| --------------------- | -------------------------------- | ---- | --------------------------------------------------- |
+| `GET`                 | `/api/admin/dashboard`           | No   | Aggregate counts + 10 most-recent access logs       |
+| `GET`                 | `/api/admin/access-logs`         | No   | Filterable logs (`user_id`, `event`, `from`, `to`)  |
+| `GET`                 | `/api/admin/users`               | No   | List users                                          |
+| `POST`                | `/api/admin/users`               | Yes  | Create a user                                       |
+| `GET`                 | `/api/admin/users/:id`           | No   | Read one user                                       |
+| `PUT`                 | `/api/admin/users/:id`           | Yes  | Update a user                                       |
+| `DELETE`              | `/api/admin/users/:id`           | Yes  | Delete a user (and its photo + memberships)         |
+| `POST`                | `/api/admin/users/:id/photo`     | Yes  | Upload a JPEG/PNG facial photo (≤ 5 MB, multipart)  |
+| `DELETE`              | `/api/admin/users/:id/photo`     | Yes  | Remove a user's stored photo                        |
+| `GET` / `POST`        | `/api/admin/groups`              | No/Yes | List / create groups                              |
+| `GET` / `PUT` / `DELETE` | `/api/admin/groups/:id`       | No/Yes | Read / update / delete a group                    |
+| `GET` / `POST`        | `/api/admin/time-zones`          | No/Yes | List / create time zones                          |
+| `GET` / `PUT` / `DELETE` | `/api/admin/time-zones/:id`   | No/Yes | Read / update / delete a time zone                |
+| `GET` / `POST`        | `/api/admin/access-rules`        | No/Yes | List / create access rules                        |
+| `GET` / `PUT` / `DELETE` | `/api/admin/access-rules/:id` | No/Yes | Read / update / delete an access rule             |
+| `GET` / `POST`        | `/api/admin/portals`             | No/Yes | List / create portals                             |
+| `GET` / `PUT` / `DELETE` | `/api/admin/portals/:id`      | No/Yes | Read / update / delete a portal                   |
+
+Validation mirrors the rest of the API: invalid input returns `400` with an
+`error-description`; an unknown id returns `404`; deleting a Group, Time Zone, or Portal that
+is still referenced by an Access Rule returns `409`; a photo larger than 5 MB returns `413`.
+
+### Photo persistence (`EMULATOR_DATA_DIR`)
+
+Uploaded facial photos are stored on disk under a `photos/` subfolder of the emulator's data
+directory. The data directory is resolved as follows:
+
+- If `EMULATOR_DATA_DIR` is set, photos are stored under that directory.
+- Otherwise, in **persistent** mode the data directory is the directory that contains
+  `EMULATOR_DB_PATH` — by default `/data`, which is the mounted volume — so stored photos
+  survive container restarts alongside the SQLite file (mount a volume at `/data`, as the
+  provided `docker-compose.yml` does).
+- Otherwise, in **ephemeral** mode photos are written to a discardable per-run temporary
+  directory and are wiped when the container stops (matching ephemeral state semantics).
+
+| Variable            | Purpose                                              | Default                                                    |
+| ------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |
+| `EMULATOR_DATA_DIR` | Root directory under which `photos/` is created      | persistent: `dirname(EMULATOR_DB_PATH)` (i.e. `/data`); ephemeral: a temp dir |
+
+---
+
 ## Documented divergences
 
 The emulator intentionally simplifies some hardware behavior. Wherever it diverges from the
@@ -180,6 +262,22 @@ is called out here so you can distinguish emulated behavior from the reference:
 - **No real biometric matching.** The emulator performs no face detection, template
   extraction, or 1:N matching. "Authorized" vs. "denied" is a **developer-selected outcome**
   in the control panel, not the result of a biometric comparison.
+- **Facial photos are for display only.** A user's facial photo is uploaded, stored,
+  previewed in the panel, and served for display via `user_get_image.fcgi` **only**. The
+  emulator performs no face detection, enrollment, or matching against the stored image.
+- **Access outcomes are simulated, not sensed.** Access-log records and access outcomes are
+  produced by the **Simulate** controls and by stored records — not by physical sensing of a
+  person at a door.
+- **Admin entities are emulated data structures.** Users, Groups, Time Zones, Access Rules,
+  and Portals are persisted data structures intended for **building and integration-testing
+  client software**, not a faithful reproduction of the device's internal access-decision
+  engine. An Access Rule composing Groups × Time Zones × Portals is stored and returned as
+  configured; the emulator does not evaluate it to grant or deny live access.
+- **Control-iD concept mapping.** Where an admin concept corresponds to a Control-iD object
+  concept in the [official API](https://www.controlid.com.br/docs/access-api-pt/), the names
+  align so you can relate the emulated entity to the reference: Users ↔ `users`, Groups ↔
+  `groups`, Portals ↔ `portals`, Access Rules ↔ `access_rules`, and Time Zones ↔
+  `time_zones`.
 - **Synthetic `device_id`.** The device identifier used in payloads is a synthetic value
   (configurable via `EMULATOR_DEVICE_ID`) rather than a hardware serial.
 - **Simplified `identifier_id`.** The identifier field on access events is simplified and
@@ -254,6 +352,20 @@ To cut a release:
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+---
+
+## References
+
+The emulator's behavior is grounded in Control-iD's official materials:
+
+- **API documentation** — [Control-iD Access API (pt)](https://www.controlid.com.br/docs/access-api-pt/): endpoint paths, request/response field names, configuration modules, and the Monitor/Push notification payloads.
+- **Integration examples** — [`controlid/integracao`](https://github.com/controlid/integracao) (folder `Controle de Acesso`). The NodeJS samples were used to validate the emulator's request/response shapes and webhook flows:
+  - **`Exemplo API Monitor - NodeJS`** — configures the device Monitor via `set_configuration.fcgi` with a `monitor` block `{ request_timeout, hostname, port, path: "api/notifications" }`, and receives device notifications at `POST /api/notifications/{dao,door,operation_mode,template,face_template,card,secbox,user_image,catra_event,usb_drive}`. This is the mechanism the emulator's Push Engine reproduces.
+  - **`Exemplo API Modo Push - NodeJS`** — the alternative proactive Push mode, configured with a `push_server` block (`push_request_timeout`, `push_request_period`, `push_remote_address`).
+  - **`Servidor Online - NodeJS`** — an online-identification server replying to identification events with the *Mensagem de Retorno* shape `{ result: { event, user_id, ... } }` (event `7` granted, `3` not identified, `4` pending), and serving `user_get_image.fcgi` / `face_create.fcgi`.
+
+Where the emulator deliberately simplifies these behaviors, the difference is listed under [Documented divergences](#documented-divergences).
 
 ---
 

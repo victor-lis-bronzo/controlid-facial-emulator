@@ -27,7 +27,8 @@
  * See design.md → "Bootstrap / StateMode selector" and "Error Handling".
  */
 import { access, constants, open } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { createDb, type DrizzleDb } from '../db/connection.js';
 import { ConfigService } from '../services/config-service.js';
 
@@ -63,6 +64,17 @@ const MAX_PORT = 65535;
 export interface ResolvedConfig {
   mode: StateMode;
   dbPath: string;
+  /**
+   * Root data directory under which the `photos/` subfolder is created
+   * (Req 13.3). Derived from `EMULATOR_DATA_DIR` when set; otherwise in
+   * persistent mode it is the directory of `dbPath` (the mounted volume, so
+   * stored photos survive restarts alongside the SQLite file), and in ephemeral
+   * mode it is a writable per-run temp directory (the default `dbPath` parent
+   * `/data` is the persistent volume mountpoint and is neither present nor
+   * writable for the non-root runtime user when no volume is mounted, which is
+   * exactly the ephemeral case).
+   */
+  dataDir: string;
   port: number;
   deviceId: number;
   login: string;
@@ -147,6 +159,23 @@ export function resolveConfig(env: EmulatorEnv): ResolvedConfig {
       ? dbPathRaw.trim()
       : DEFAULT_DB_PATH;
 
+  // Data dir for stored photos (Req 13.3):
+  //   1. explicit EMULATOR_DATA_DIR when set;
+  //   2. else, in persistent mode, the DB file's directory — the mounted volume,
+  //      so photos persist alongside the SQLite file across restarts;
+  //   3. else, in ephemeral mode, a writable per-run temp directory. The default
+  //      persistent `dbPath` parent (`/data`) is a volume mountpoint that is not
+  //      present/writable for the non-root user when no volume is mounted, so
+  //      deriving the ephemeral photo dir from it breaks photo upload. Ephemeral
+  //      storage is discardable by definition, so a temp dir is the right home.
+  const dataDirRaw = env.EMULATOR_DATA_DIR;
+  const dataDir =
+    dataDirRaw !== undefined && dataDirRaw.trim() !== ''
+      ? dataDirRaw.trim()
+      : mode === 'persistent'
+        ? dirname(dbPath)
+        : join(tmpdir(), 'controlid-emulator-data');
+
   const port = parsePort(env.EMULATOR_PORT);
   const deviceId = parseDeviceId(env.EMULATOR_DEVICE_ID);
   const login = parseCredential('EMULATOR_LOGIN', env.EMULATOR_LOGIN, DEFAULT_LOGIN);
@@ -156,7 +185,7 @@ export function resolveConfig(env: EmulatorEnv): ResolvedConfig {
     DEFAULT_PASSWORD,
   );
 
-  return { mode, dbPath, port, deviceId, login, password, warnings };
+  return { mode, dbPath, dataDir, port, deviceId, login, password, warnings };
 }
 
 /** Parse/validate `EMULATOR_PORT`; default 8080; must be an integer in 1–65535. */

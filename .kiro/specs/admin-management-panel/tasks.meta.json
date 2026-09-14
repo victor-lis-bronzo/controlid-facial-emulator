@@ -1,0 +1,21 @@
+{
+  "pbtResults": {
+    "5.4 Property test: Time Range validity": {
+      "status": "passed",
+      "lastRunTimestamp": 1789161619168
+    },
+    "5.7 Property test: Access-rule referential integrity": {
+      "status": "passed",
+      "lastRunTimestamp": 1789161620572
+    },
+    "5.8 Property test: Access-rule composition validity": {
+      "status": "passed",
+      "lastRunTimestamp": 1789161621521
+    },
+    "5.10 Property test: Group membership round-trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1789161622430
+    }
+  },
+  "executionHistory": {}
+}

@@ -115,6 +115,7 @@ describe('ensureVolumeWritable / persistent volume handling (Req 9.5, 10.4)', ()
     const resolved: ResolvedConfig = {
       mode: 'persistent',
       dbPath: '/nonexistent-vol-xyz/emulator.sqlite',
+      dataDir: '/nonexistent-vol-xyz',
       port: 8080,
       deviceId: 123456,
       login: 'admin',

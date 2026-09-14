@@ -16,6 +16,7 @@ import type { ResolvedConfig } from './bootstrap.js';
 const RESOLVED: ResolvedConfig = {
   mode: 'ephemeral',
   dbPath: ':memory:',
+  dataDir: '.',
   port: 0,
   deviceId: 478435,
   login: 'admin',
