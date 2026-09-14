@@ -133,6 +133,16 @@ export function registerObjectRoutes(
       const body = (request.body ?? {}) as Record<string, unknown>;
       const object = requireObject(body);
       const where = requireObjectMap(body.where, 'where');
+
+      if (object === 'users') {
+        const matchingUsers = await container.objectStore.load('users', where);
+        for (const u of matchingUsers) {
+          if (typeof u.id === 'number') {
+            await container.photos.delete(u.id);
+          }
+        }
+      }
+
       const result = await container.objectStore.destroy(object, where);
       reply.type('application/json');
       return { changes: result.changes };

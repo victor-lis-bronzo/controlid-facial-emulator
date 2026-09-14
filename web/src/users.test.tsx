@@ -361,4 +361,148 @@ describe('Users Management via .fcgi (Issue #21)', () => {
       });
     });
   });
+
+  describe('User Deletion with Confirmation via POST /destroy_objects.fcgi (Issue #25)', () => {
+    it('opens confirmation modal showing user name and registration when delete button is clicked', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001' }],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+
+      const deleteBtn = screen.getByRole('button', { name: /excluir carlos alberto|excluir/i });
+      await userEvent.click(deleteBtn);
+
+      expect(screen.getByRole('heading', { name: /confirmar exclusão|excluir usuário/i })).toBeInTheDocument();
+      expect(screen.getAllByText(/carlos alberto/i).length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText(/reg001/i).length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('cancels deletion when cancel button is clicked without calling destroy_objects.fcgi', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001' }],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /excluir carlos alberto|excluir/i }));
+      expect(screen.getByRole('heading', { name: /confirmar exclusão|excluir usuário/i })).toBeInTheDocument();
+
+      const cancelBtn = screen.getByRole('button', { name: /cancelar/i });
+      await userEvent.click(cancelBtn);
+
+      expect(screen.queryByRole('heading', { name: /confirmar exclusão|excluir usuário/i })).not.toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('/destroy_objects.fcgi'),
+        expect.anything()
+      );
+    });
+
+    it('dispatches POST /destroy_objects.fcgi?object=users with session and reloads list upon confirmation', async () => {
+      let usersList = [{ id: 1, name: 'Carlos Alberto', registration: 'REG001' }];
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ users: usersList }),
+          } as Response;
+        }
+
+        if (urlString.includes('/destroy_objects.fcgi') && method === 'POST') {
+          usersList = [];
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ changes: 1 }),
+          } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+
+      // Click delete button
+      await userEvent.click(screen.getByRole('button', { name: /excluir carlos alberto|excluir/i }));
+
+      // Confirm deletion
+      const confirmBtn = screen.getByRole('button', { name: /confirmar exclusão/i });
+      await userEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/destroy_objects.fcgi?object=users&session=auth-token-999'),
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+              object: 'users',
+              where: { id: 1 },
+            }),
+          })
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Nenhum usuário cadastrado no momento.')).toBeInTheDocument();
+      });
+    });
+  });
 });

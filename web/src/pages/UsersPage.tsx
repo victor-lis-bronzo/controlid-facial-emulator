@@ -38,6 +38,9 @@ export function UsersPage() {
   const [editFormData, setEditFormData] = useState<UserFormData>(INITIAL_FORM_DATA);
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
+  const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
+  const [submittingDelete, setSubmittingDelete] = useState(false);
+
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -135,6 +138,27 @@ export function UsersPage() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+    try {
+      setSubmittingDelete(true);
+      setError(null);
+      await fcgiFetch('/destroy_objects.fcgi?object=users', {
+        method: 'POST',
+        body: JSON.stringify({
+          object: 'users',
+          where: { id: deletingUser.id },
+        }),
+      });
+      setDeletingUser(null);
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao excluir usuário');
+    } finally {
+      setSubmittingDelete(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -195,6 +219,13 @@ export function UsersPage() {
                           className="text-xs font-semibold text-sky-400 hover:text-sky-300 px-2.5 py-1 rounded border border-sky-500/30 hover:bg-sky-500/10 transition-colors"
                         >
                           Editar
+                        </button>
+                        <button
+                          onClick={() => setDeletingUser(user)}
+                          aria-label={`Excluir ${user.name}`}
+                          className="text-xs font-semibold text-rose-400 hover:text-rose-300 px-2.5 py-1 rounded border border-rose-500/30 hover:bg-rose-500/10 transition-colors"
+                        >
+                          Excluir
                         </button>
                       </td>
                     </tr>
@@ -379,6 +410,53 @@ export function UsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirm delete user */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white">Confirmar Exclusão</h3>
+              <button
+                onClick={() => setDeletingUser(null)}
+                className="text-slate-400 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-slate-300">
+                Tem certeza que deseja remover o usuário{' '}
+                <span className="font-semibold text-white">{deletingUser.name}</span>{' '}
+                (Matrícula:{' '}
+                <span className="font-mono text-white">{deletingUser.registration || '-'}</span>)?
+              </p>
+              <p className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">
+                Esta ação removerá permanentemente o usuário, sua biometria facial e permissões associadas.
+              </p>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingUser(null)}
+                  className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteUser}
+                  disabled={submittingDelete}
+                  className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50 transition-colors"
+                >
+                  {submittingDelete ? 'Excluindo...' : 'Confirmar Exclusão'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
