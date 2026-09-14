@@ -1,6 +1,6 @@
 {
   "name": "controlid-facial-emulator",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "A plug-and-play Docker emulator of the Control-iD facial access control reader's HTTP (.fcgi) API, push/webhook mechanism, and web control panel.",
   "type": "module",
