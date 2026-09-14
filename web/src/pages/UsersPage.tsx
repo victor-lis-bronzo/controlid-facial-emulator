@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFcgi } from '../hooks/useFcgi.ts';
-import { useAuth } from '../context/AuthContext.tsx';
 
 interface UserItem {
   id: number;
@@ -26,7 +25,6 @@ const INITIAL_FORM_DATA: UserFormData = {
 
 export function UsersPage() {
   const { fcgiFetch } = useFcgi();
-  const { logout } = useAuth();
 
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,30 +88,8 @@ export function UsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans text-slate-100">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="h-8 w-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
-            iD
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-white leading-tight">Control-iD WebGUI</h1>
-            <p className="text-xs text-slate-400">Emulador de Controle de Acesso Facial</p>
-          </div>
-        </div>
-
-        <button
-          onClick={logout}
-          className="text-xs font-semibold text-slate-400 hover:text-white px-3 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 transition-colors"
-        >
-          Sair
-        </button>
-      </header>
-
-      {/* Main content */}
-      <main className="max-w-6xl mx-auto p-6 md:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h2 aria-label="Users" className="text-2xl font-bold tracking-tight text-white">
               Usuários
@@ -170,7 +146,6 @@ export function UsersPage() {
             </div>
           )}
         </div>
-      </main>
 
       {/* Modal create user */}
       {showModal && (

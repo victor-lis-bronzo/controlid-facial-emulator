@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { UsersPage } from './pages/UsersPage.tsx';
 import { ProtectedRoute } from './components/ProtectedRoute.tsx';
+import { WebGuiLayout } from './components/WebGuiLayout.tsx';
 import { useAuth } from './context/AuthContext.tsx';
 
 function RootRedirect() {
@@ -17,7 +18,9 @@ export function AppRouter() {
         path="/admin/users"
         element={
           <ProtectedRoute>
-            <UsersPage />
+            <WebGuiLayout>
+              <UsersPage />
+            </WebGuiLayout>
           </ProtectedRoute>
         }
       />
