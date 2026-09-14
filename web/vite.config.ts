@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // The API server serves this SPA statically at `/admin`, so all built asset
 // URLs must resolve under that base (Req 7.1). During local development the
@@ -8,7 +9,7 @@ import react from '@vitejs/plugin-react';
 // same-origin API client works without CORS.
 export default defineConfig({
   base: '/admin/',
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     proxy: {
       '/api': {
