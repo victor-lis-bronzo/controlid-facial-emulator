@@ -176,4 +176,189 @@ describe('Users Management via .fcgi (Issue #21)', () => {
       );
     });
   });
+
+  describe('User Editing via POST /modify_objects.fcgi (Issue #24)', () => {
+    it('opens edit modal pre-filled with user data when Edit button is clicked', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001' }],
+              }),
+          } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+
+      const editBtn = screen.getByRole('button', { name: /editar carlos alberto|editar/i });
+      await userEvent.click(editBtn);
+
+      expect(screen.getByRole('heading', { name: /editar usuário/i })).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Carlos Alberto')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('REG001')).toBeInTheDocument();
+    });
+
+    it('submits updated values via POST /modify_objects.fcgi?object=users with session and reloads list', async () => {
+      let usersList = [{ id: 1, name: 'Carlos Alberto', registration: 'REG001' }];
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ users: usersList }),
+          } as Response;
+        }
+
+        if (urlString.includes('/modify_objects.fcgi') && method === 'POST') {
+          const body = JSON.parse(String(init?.body));
+          usersList = [{ id: 1, name: body.values.name, registration: body.values.registration }];
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ changes: 1 }),
+          } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+
+      // Open edit modal
+      await userEvent.click(screen.getByRole('button', { name: /editar carlos alberto|editar/i }));
+
+      // Edit fields
+      const nameInput = screen.getByDisplayValue('Carlos Alberto');
+      await userEvent.clear(nameInput);
+      await userEvent.type(nameInput, 'Carlos Alberto Silva');
+
+      const regInput = screen.getByDisplayValue('REG001');
+      await userEvent.clear(regInput);
+      await userEvent.type(regInput, 'REG001-NEW');
+
+      const pinInput = screen.getByLabelText(/senha|pin/i);
+      await userEvent.type(pinInput, '9988');
+
+      // Submit changes
+      await userEvent.click(screen.getByRole('button', { name: /salvar alterações|salvar/i }));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/modify_objects.fcgi?object=users&session=auth-token-999'),
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+              object: 'users',
+              values: {
+                name: 'Carlos Alberto Silva',
+                registration: 'REG001-NEW',
+                password: '9988',
+              },
+              where: { id: 1 },
+            }),
+          })
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto Silva')).toBeInTheDocument();
+        expect(screen.getByText('REG001-NEW')).toBeInTheDocument();
+      });
+    });
+
+    it('omits password in values if password field was left blank when editing', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                users: [{ id: 1, name: 'Carlos Alberto', registration: 'REG001' }],
+              }),
+          } as Response;
+        }
+
+        if (urlString.includes('/modify_objects.fcgi') && method === 'POST') {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ changes: 1 }),
+          } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Carlos Alberto')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /editar/i }));
+
+      const nameInput = screen.getByDisplayValue('Carlos Alberto');
+      await userEvent.clear(nameInput);
+      await userEvent.type(nameInput, 'Carlos Editado');
+
+      await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/modify_objects.fcgi?object=users'),
+          expect.objectContaining({
+            body: JSON.stringify({
+              object: 'users',
+              values: {
+                name: 'Carlos Editado',
+                registration: 'REG001',
+              },
+              where: { id: 1 },
+            }),
+          })
+        );
+      });
+    });
+  });
 });
