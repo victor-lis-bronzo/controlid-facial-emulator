@@ -1,19 +1,34 @@
-# Control-iD Facial Emulator — local run via a single `docker compose up` (Req 10.5).
+# Control-iD Facial Emulator - local run via a single `docker compose up` (Req 10.5).
 #
 # Starts the emulator in persistent mode with a named volume mounted at /data,
 # matching the default EMULATOR_DB_PATH (/data/emulator.sqlite) so configuration
 # and the interception log survive container restarts (Req 9.1).
 services:
-  emulator:
-    build: .
-    image: controlid-emulator:latest
+  api:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
+    image: controlid-emulator:api-latest
     ports:
-      - "8080:8080" # host:container — single exposed port (Req 10.1, 10.5)
+      - "8080:8080" # host:container (API port)
     environment:
       EMULATOR_STATE_MODE: persistent
       EMULATOR_DB_PATH: /data/emulator.sqlite
     volumes:
-      - emulator-data:/data # persistent-mode storage volume (Req 9.1)
+      - emulator-data:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+    image: controlid-emulator:web-latest
+    ports:
+      - "80:80" # host:container (Web GUI port)
+    environment:
+      API_HOST: http://api:8080
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:

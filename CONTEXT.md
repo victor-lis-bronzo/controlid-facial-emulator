@@ -19,3 +19,15 @@ _Avoid_: AppShell, MasterLayout, AdminTemplate
 **User_Photo**:
 A fotografia biométrica facial associada a um User, persistida no armazenamento de arquivos da leitora e servida/manipulada exclusivamente através dos endpoints .fcgi.
 _Avoid_: AvatarImage, ProfilePic, UserPicture
+
+**API_Image**:
+A imagem Docker puramente focada em backend, responsável exclusivamente por emular os endpoints nativos (`.fcgi`), processamento e persistência de dados. Desacoplada da entrega do frontend.
+_Avoid_: Backend Container, Mono Image
+
+**Web_Image**:
+A imagem Docker contendo o pacote estático final da WebGUI servido via um proxy reverso (Nginx). Atua de forma agnóstica repassando chamadas `.fcgi` dinamicamente para o backend via proxy pass.
+_Avoid_: Frontend Container, React Image
+
+**Mono-repo Registry**:
+Estratégia de publicação no Docker Hub onde imagens distintas (API e Web) habitam o exato mesmo repositório, sendo separadas e identificadas apenas pelos prefixos de suas tags (ex: `:api-latest` e `:web-latest`).
+_Avoid_: Multi-repo, Split registry
