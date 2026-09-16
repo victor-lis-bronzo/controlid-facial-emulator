@@ -911,4 +911,418 @@ describe('Users Management via .fcgi (Issue #21)', () => {
       expect(screen.getAllByRole('img', { name: /photo of carlos alberto/i }).length).toBeGreaterThan(0);
     });
   });
+
+  describe('User Creation with Photo (Issue #39)', () => {
+    it('creates a user without a photo unchanged: no user_set_image.fcgi call, same payload', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ users: [] }),
+          } as Response;
+        }
+
+        if (urlString.includes('/create_objects.fcgi') && method === 'POST') {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ ids: [10] }),
+          } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+      await userEvent.type(screen.getByLabelText(/nome/i), 'Sem Foto');
+      await userEvent.type(screen.getByLabelText(/matrícula/i), 'REG-NO-PHOTO');
+      await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/create_objects.fcgi?object=users'),
+          expect.objectContaining({
+            body: JSON.stringify({
+              object: 'users',
+              values: [{ name: 'Sem Foto', registration: 'REG-NO-PHOTO' }],
+            }),
+          })
+        );
+      });
+
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('/user_set_image.fcgi'),
+        expect.anything()
+      );
+    });
+
+    it('creates a user with a valid JPEG: create_objects.fcgi then user_set_image.fcgi with the returned id and file', async () => {
+      let usersList: Array<{ id: number; name: string; registration: string; image_path: string | null }> =
+        [];
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ users: usersList }),
+          } as Response;
+        }
+
+        if (urlString.includes('/create_objects.fcgi') && method === 'POST') {
+          const body = JSON.parse(String(init?.body));
+          usersList = [
+            ...usersList,
+            {
+              id: 42,
+              name: body.values[0].name,
+              registration: body.values[0].registration,
+              image_path: null,
+            },
+          ];
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ ids: [42] }),
+          } as Response;
+        }
+
+        if (urlString.includes('/user_set_image.fcgi') && method === 'POST') {
+          usersList = usersList.map((u) => (u.id === 42 ? { ...u, image_path: 'photos/42.jpg' } : u));
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ success: true }),
+          } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+      await userEvent.type(screen.getByLabelText(/nome/i), 'Com Foto');
+      await userEvent.type(screen.getByLabelText(/matrícula/i), 'REG-PHOTO');
+
+      const file = new File([new Uint8Array([1, 2, 3])], 'face.jpg', { type: 'image/jpeg' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, file);
+
+      await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+      await waitFor(() => {
+        const createCallIndex = fetchSpy.mock.calls.findIndex(([u]) =>
+          String(u).includes('/create_objects.fcgi')
+        );
+        const uploadCallIndex = fetchSpy.mock.calls.findIndex(([u]) =>
+          String(u).includes('/user_set_image.fcgi')
+        );
+        expect(createCallIndex).toBeGreaterThanOrEqual(0);
+        expect(uploadCallIndex).toBeGreaterThan(createCallIndex);
+      });
+
+      const uploadCall = fetchSpy.mock.calls.find(([u]) => String(u).includes('/user_set_image.fcgi'));
+      expect(uploadCall).toBeDefined();
+      const [, uploadInit] = uploadCall!;
+      const uploadBody = uploadInit?.body as FormData;
+      expect(uploadBody).toBeInstanceOf(FormData);
+      expect(uploadBody.get('user_id')).toBe('42');
+      expect(uploadBody.get('file')).toBeInstanceOf(File);
+      expect((uploadBody.get('file') as File).name).toBe('face.jpg');
+    });
+
+    it('rejects an invalid mime type in the create form immediately, without calling fetch', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+
+      const callsBefore = fetchSpy.mock.calls.length;
+      const user = userEvent.setup({ applyAccept: false });
+      const gif = new File([new Uint8Array([1, 2, 3])], 'face.gif', { type: 'image/gif' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await user.upload(fileInput, gif);
+
+      expect(await screen.findByText(/formato inválido/i)).toBeInTheDocument();
+      expect(fetchSpy.mock.calls.length).toBe(callsBefore);
+    });
+
+    it('rejects an oversized file in the create form immediately, without calling fetch', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const urlString = String(url);
+        if (urlString.includes('/load_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) } as Response;
+        }
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+
+      const callsBefore = fetchSpy.mock.calls.length;
+      const oversized = new File([new Uint8Array(6 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, oversized);
+
+      expect(await screen.findByText(/não pode exceder 5 mb/i)).toBeInTheDocument();
+      expect(fetchSpy.mock.calls.length).toBe(callsBefore);
+    });
+
+    it('does not call user_set_image.fcgi when create_objects.fcgi fails, shows the error and keeps the modal open', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ users: [] }) } as Response;
+        }
+
+        if (urlString.includes('/create_objects.fcgi') && method === 'POST') {
+          return {
+            ok: false,
+            status: 400,
+            text: async () => JSON.stringify({ 'error-description': 'Registration already in use.' }),
+          } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+      await userEvent.type(screen.getByLabelText(/nome/i), 'Falha Criação');
+      await userEvent.type(screen.getByLabelText(/matrícula/i), 'REG-FAIL');
+
+      const file = new File([new Uint8Array([1, 2, 3])], 'face.jpg', { type: 'image/jpeg' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, file);
+
+      await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+      expect(await screen.findByText(/registration already in use/i)).toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('/user_set_image.fcgi'),
+        expect.anything()
+      );
+      expect(screen.getByRole('heading', { name: /cadastrar usuário/i })).toBeInTheDocument();
+    });
+
+    it('shows the new user photo after a successful creation with photo reloads the list', async () => {
+      let usersList: Array<{ id: number; name: string; registration: string; image_path: string | null }> =
+        [];
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ users: usersList }) } as Response;
+        }
+
+        if (urlString.includes('/create_objects.fcgi') && method === 'POST') {
+          const body = JSON.parse(String(init?.body));
+          usersList = [
+            ...usersList,
+            { id: 7, name: body.values[0].name, registration: body.values[0].registration, image_path: null },
+          ];
+          return { ok: true, status: 200, text: async () => JSON.stringify({ ids: [7] }) } as Response;
+        }
+
+        if (urlString.includes('/user_set_image.fcgi') && method === 'POST') {
+          usersList = usersList.map((u) => (u.id === 7 ? { ...u, image_path: 'photos/7.jpg' } : u));
+          return { ok: true, status: 200, text: async () => JSON.stringify({ success: true }) } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+      await userEvent.type(screen.getByLabelText(/nome/i), 'Nova Pessoa');
+      await userEvent.type(screen.getByLabelText(/matrícula/i), 'REG-NEW');
+
+      const file = new File([new Uint8Array([1, 2, 3])], 'face.jpg', { type: 'image/jpeg' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, file);
+
+      await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('img', { name: /photo of nova pessoa/i })).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('User Creation Partial Failure (Issue #40)', () => {
+    it('when user_set_image.fcgi fails after a successful create_objects.fcgi: no destroy_objects.fcgi call, create modal closes, list reloads with the new user, and the edit modal reopens automatically showing the upload error', async () => {
+      let usersList: Array<{ id: number; name: string; registration: string; image_path: string | null }> =
+        [];
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ users: usersList }) } as Response;
+        }
+
+        if (urlString.includes('/create_objects.fcgi') && method === 'POST') {
+          const body = JSON.parse(String(init?.body));
+          usersList = [
+            ...usersList,
+            { id: 99, name: body.values[0].name, registration: body.values[0].registration, image_path: null },
+          ];
+          return { ok: true, status: 200, text: async () => JSON.stringify({ ids: [99] }) } as Response;
+        }
+
+        if (urlString.includes('/user_set_image.fcgi') && method === 'POST') {
+          return {
+            ok: false,
+            status: 500,
+            text: async () => JSON.stringify({ 'error-description': 'Falha ao processar imagem facial.' }),
+          } as Response;
+        }
+
+        if (urlString.includes('/destroy_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({}) } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      render(
+        <AuthProvider>
+          <MemoryRouter>
+            <UsersPage />
+          </MemoryRouter>
+        </AuthProvider>
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /novo usuário/i }));
+      await userEvent.type(screen.getByLabelText(/nome/i), 'Falha Parcial');
+      await userEvent.type(screen.getByLabelText(/matrícula/i), 'REG-PARTIAL');
+
+      const file = new File([new Uint8Array([1, 2, 3])], 'face.jpg', { type: 'image/jpeg' });
+      const fileInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(fileInput, file);
+
+      await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+      // Create modal closes and edit modal reopens automatically with the error.
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /cadastrar usuário/i })).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /editar usuário/i })).toBeInTheDocument();
+      });
+
+      expect(await screen.findByText(/falha ao processar imagem facial/i)).toBeInTheDocument();
+
+      // List reloaded showing the new user.
+      expect(screen.getByText('Falha Parcial')).toBeInTheDocument();
+
+      // No rollback of the created user.
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('/destroy_objects.fcgi'),
+        expect.anything()
+      );
+
+      // Re-selecting and re-uploading the photo from the already-open edit modal succeeds.
+      fetchSpy.mockImplementation(async (url, init) => {
+        const urlString = String(url);
+        const method = init?.method ?? 'GET';
+
+        if (urlString.includes('/load_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({ users: usersList }) } as Response;
+        }
+
+        if (urlString.includes('/user_set_image.fcgi') && method === 'POST') {
+          usersList = usersList.map((u) => (u.id === 99 ? { ...u, image_path: 'photos/99.jpg' } : u));
+          return { ok: true, status: 200, text: async () => JSON.stringify({ success: true }) } as Response;
+        }
+
+        if (urlString.includes('/destroy_objects.fcgi')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify({}) } as Response;
+        }
+
+        return { ok: false, status: 404, text: async () => '' } as Response;
+      });
+
+      const retryFile = new File([new Uint8Array([4, 5, 6])], 'retry.jpg', { type: 'image/jpeg' });
+      const retryInput = screen.getByLabelText(/selecionar foto/i);
+      await userEvent.upload(retryInput, retryFile);
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/user_set_image.fcgi'),
+          expect.anything()
+        );
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/falha ao processar imagem facial/i)
+        ).not.toBeInTheDocument();
+      });
+
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('/destroy_objects.fcgi'),
+        expect.anything()
+      );
+    });
+  });
 });

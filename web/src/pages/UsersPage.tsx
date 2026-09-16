@@ -2,9 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useFcgi } from '../hooks/useFcgi.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { Avatar } from '../components/Avatar.tsx';
-
-const ACCEPTED_PHOTO_MIMES = ['image/jpeg', 'image/png'];
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+import { PhotoField } from '../components/PhotoField.tsx';
 
 interface UserItem {
   id: number;
@@ -48,10 +46,14 @@ export function UsersPage() {
   const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
   const [submittingDelete, setSubmittingDelete] = useState(false);
 
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [removingPhoto, setRemovingPhoto] = useState(false);
   const [photoRefreshTokens, setPhotoRefreshTokens] = useState<Record<number, number>>({});
+  const [stagedPhotoFile, setStagedPhotoFile] = useState<File | null>(null);
+  const [editPhotoInitialError, setEditPhotoInitialError] = useState<string | null>(null);
+
+  const closeCreateModal = () => {
+    setShowModal(false);
+    setStagedPhotoFile(null);
+  };
 
   const loadUsers = useCallback(async () => {
     try {
@@ -88,7 +90,7 @@ export function UsersPage() {
         userPayload.password = formData.password;
       }
 
-      await fcgiFetch('/create_objects.fcgi?object=users', {
+      const created = await fcgiFetch<{ ids: number[] }>('/create_objects.fcgi?object=users', {
         method: 'POST',
         body: JSON.stringify({
           object: 'users',
@@ -96,9 +98,45 @@ export function UsersPage() {
         }),
       });
 
+      const newUserId = created.ids[0];
+      // `ids` should always be non-empty on success, but guard against an
+      // unexpected empty array so we never send `user_id: undefined` to
+      // user_set_image.fcgi: treat it exactly like "no staged photo".
+      const photoToUpload = newUserId !== undefined ? stagedPhotoFile : null;
+
       setFormData(INITIAL_FORM_DATA);
+      setStagedPhotoFile(null);
       setShowModal(false);
-      await loadUsers();
+
+      if (photoToUpload) {
+        // The user was already created successfully at this point. A
+        // failure here is a partial failure (Issue #40): it must not be
+        // treated as a creation failure, must not roll back the created
+        // user, and should surface by reopening the edit modal for this
+        // user with the upload error already visible.
+        try {
+          const body = new FormData();
+          body.append('user_id', String(newUserId));
+          body.append('file', photoToUpload);
+          await fcgiUpload('/user_set_image.fcgi', body);
+          await loadUsers();
+        } catch (photoErr) {
+          await loadUsers();
+          const message =
+            photoErr instanceof Error ? photoErr.message : 'Erro ao enviar foto';
+          openEditModal(
+            {
+              id: newUserId as number,
+              name: userPayload.name as string,
+              registration: userPayload.registration as string,
+              image_path: null,
+            },
+            message
+          );
+        }
+      } else {
+        await loadUsers();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao cadastrar usuário');
     } finally {
@@ -106,14 +144,20 @@ export function UsersPage() {
     }
   };
 
-  const handleOpenEdit = (user: UserItem) => {
+  // Shared by manual "Editar" clicks and the Issue #40 partial-failure
+  // recovery path, so both build the same editingUser/editFormData shape.
+  const openEditModal = (user: UserItem, photoError: string | null = null) => {
+    setEditPhotoInitialError(photoError);
     setEditingUser(user);
     setEditFormData({
       name: user.name,
       registration: user.registration,
       password: '',
     });
-    setPhotoError(null);
+  };
+
+  const handleOpenEdit = (user: UserItem) => {
+    openEditModal(user);
   };
 
   const handleEditUser = async (e: React.FormEvent) => {
@@ -151,60 +195,12 @@ export function UsersPage() {
     }
   };
 
-  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !editingUser) return;
-
-    if (!ACCEPTED_PHOTO_MIMES.includes(file.type)) {
-      setPhotoError('Formato inválido. Aceito apenas JPEG ou PNG.');
-      return;
-    }
-    if (file.size > MAX_PHOTO_BYTES) {
-      setPhotoError('A foto não pode exceder 5 MB.');
-      return;
-    }
-
-    const userId = editingUser.id;
-    try {
-      setUploadingPhoto(true);
-      setPhotoError(null);
-
-      const body = new FormData();
-      body.append('user_id', String(userId));
-      body.append('file', file);
-      await fcgiUpload('/user_set_image.fcgi', body);
-
-      setPhotoRefreshTokens((prev) => ({ ...prev, [userId]: Date.now() }));
-      setEditingUser((prev) => (prev ? { ...prev, image_path: 'photo' } : prev));
-      await loadUsers();
-    } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : 'Erro ao enviar foto');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const handleRemovePhoto = async () => {
+  const handlePhotoUpdated = async (hasPhoto: boolean) => {
     if (!editingUser) return;
     const userId = editingUser.id;
-    try {
-      setRemovingPhoto(true);
-      setPhotoError(null);
-
-      await fcgiFetch('/user_destroy_image.fcgi', {
-        method: 'POST',
-        body: JSON.stringify({ user_id: userId }),
-      });
-
-      setPhotoRefreshTokens((prev) => ({ ...prev, [userId]: Date.now() }));
-      setEditingUser((prev) => (prev ? { ...prev, image_path: null } : prev));
-      await loadUsers();
-    } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : 'Erro ao remover foto');
-    } finally {
-      setRemovingPhoto(false);
-    }
+    setPhotoRefreshTokens((prev) => ({ ...prev, [userId]: Date.now() }));
+    setEditingUser((prev) => (prev ? { ...prev, image_path: hasPhoto ? 'photo' : null } : prev));
+    await loadUsers();
   };
 
   const handleDeleteUser = async () => {
@@ -322,7 +318,7 @@ export function UsersPage() {
             <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white">Cadastrar Usuário</h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={closeCreateModal}
                 className="text-slate-400 hover:text-white text-sm"
               >
                 ✕
@@ -383,10 +379,18 @@ export function UsersPage() {
                 />
               </div>
 
+              <PhotoField
+                mode="staged"
+                hasPhoto={false}
+                name={formData.name || 'Novo usuário'}
+                inputId="newUserPhoto"
+                onFileStaged={setStagedPhotoFile}
+              />
+
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeCreateModal}
                   className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
                 >
                   Cancelar
@@ -405,6 +409,10 @@ export function UsersPage() {
       )}
 
       {/* Modal edit user */}
+      {/* Conditionally rendered (not `hidden`) so PhotoField unmounts/remounts
+          on every editingUser change — PhotoField's `initialError` prop is
+          only read once, at mount, so this remount is what makes the
+          Issue #40 auto-reopen-with-error flow work. */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
@@ -472,47 +480,15 @@ export function UsersPage() {
                 />
               </div>
 
-              <div>
-                <span className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
-                  Foto de Rosto
-                </span>
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    userId={editingUser.id}
-                    hasPhoto={Boolean(editingUser.image_path)}
-                    name={editingUser.name}
-                    refreshToken={photoRefreshTokens[editingUser.id]}
-                    session={session ?? undefined}
-                  />
-                  <label
-                    htmlFor="editUserPhoto"
-                    className="cursor-pointer rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
-                  >
-                    {uploadingPhoto ? 'Enviando...' : 'Selecionar Foto'}
-                  </label>
-                  <input
-                    id="editUserPhoto"
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    onChange={handlePhotoSelected}
-                    disabled={uploadingPhoto}
-                    className="sr-only"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRemovePhoto}
-                    disabled={editingUser.image_path === null || removingPhoto}
-                    className="text-xs font-semibold text-rose-400 hover:text-rose-300 px-2.5 py-1 rounded border border-rose-500/30 hover:bg-rose-500/10 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
-                  >
-                    {removingPhoto ? 'Removendo...' : 'Remover Foto'}
-                  </button>
-                </div>
-                {photoError && (
-                  <div className="mt-2 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400">
-                    {photoError}
-                  </div>
-                )}
-              </div>
+              <PhotoField
+                userId={editingUser.id}
+                hasPhoto={Boolean(editingUser.image_path)}
+                name={editingUser.name}
+                refreshToken={photoRefreshTokens[editingUser.id]}
+                session={session ?? undefined}
+                onPhotoUpdated={handlePhotoUpdated}
+                initialError={editPhotoInitialError}
+              />
 
               <div className="flex justify-end gap-3 pt-2">
                 <button

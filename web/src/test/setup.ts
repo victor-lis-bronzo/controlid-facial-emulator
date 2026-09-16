@@ -41,3 +41,12 @@ if (typeof window !== 'undefined') {
     configurable: true,
   });
 }
+
+// jsdom doesn't implement the Blob URL APIs; PhotoField's staged-photo
+// preview relies on them, so stub minimal versions for tests.
+if (typeof URL.createObjectURL !== 'function') {
+  URL.createObjectURL = () => 'blob:mock-url';
+}
+if (typeof URL.revokeObjectURL !== 'function') {
+  URL.revokeObjectURL = () => {};
+}
