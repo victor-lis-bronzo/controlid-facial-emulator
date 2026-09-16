@@ -1774,6 +1774,74 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — custom_thresholds empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('custom_thresholds');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('custom_thresholds', [{ user_id: '1', threshold: '50' }]);
+      const rows = await store.load('custom_thresholds', { user_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — custom_thresholds filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('custom_thresholds', [{ user_id: '1', threshold: '50' }]);
+      await expect(
+        store.load('custom_thresholds', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('custom_thresholds', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('custom_thresholds CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys custom_thresholds', async () => {
+      // create
+      const created = await store.create('custom_thresholds', [
+        { user_id: '1', threshold: '50' },
+        { user_id: '2', threshold: '70' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('custom_thresholds');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.user_id === '1');
+      expect(first).toMatchObject({ user_id: '1', threshold: '50' });
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('custom_thresholds', { user_id: '2', threshold: '70' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('custom_thresholds', { threshold: '90' }, { user_id: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('custom_thresholds', { user_id: '2' });
+      expect(afterModify[0]).toMatchObject({ threshold: '90' });
+
+      // destroy
+      const destroyed = await store.destroy('custom_thresholds', { user_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('custom_thresholds');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ user_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('custom_thresholds', [{ user_id: '1', threshold: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

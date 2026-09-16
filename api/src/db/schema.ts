@@ -222,6 +222,12 @@ export const accessEvents = sqliteTable('access_events', {
   timestamp: text('timestamp').notNull(),
 });
 
+export const customThresholds = sqliteTable('custom_thresholds', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull(),
+  threshold: text('threshold').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

@@ -1491,6 +1491,58 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad20.json()).toEqual({ access_events: [] });
   });
+
+  it('custom_thresholds: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'custom_thresholds', values: [{ user_id: '1', threshold: '50' }] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'custom_thresholds' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { custom_thresholds: Record<string, unknown>[] };
+    expect(loaded.custom_thresholds.length).toBe(1);
+    expect(loaded.custom_thresholds[0].threshold).toBe('50');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'custom_thresholds', values: { threshold: '90' }, where: { user_id: '1' } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'custom_thresholds', where: { user_id: '1' } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad21 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'custom_thresholds' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad21.json()).toEqual({ custom_thresholds: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

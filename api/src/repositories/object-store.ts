@@ -58,6 +58,7 @@ import {
   contacts,
   timedAlarms,
   accessEvents,
+  customThresholds,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -342,6 +343,14 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       identification: { column: accessEvents.identification, schemaKey: 'identification', numeric: false },
       device_id: { column: accessEvents.deviceId, schemaKey: 'deviceId', numeric: false },
       timestamp: { column: accessEvents.timestamp, schemaKey: 'timestamp', numeric: false },
+    },
+  },
+  custom_thresholds: {
+    table: customThresholds,
+    columns: {
+      id: { column: customThresholds.id, schemaKey: 'id', numeric: true },
+      user_id: { column: customThresholds.userId, schemaKey: 'userId', numeric: false },
+      threshold: { column: customThresholds.threshold, schemaKey: 'threshold', numeric: false },
     },
   },
 };

@@ -232,6 +232,11 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     device_id TEXT NOT NULL,
     timestamp TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS custom_thresholds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    threshold TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

@@ -1852,3 +1852,78 @@ describe('ObjectStore.load — Property 10 (access_events): filtered queries ret
     );
   });
 });
+
+/** The wire columns of `custom_thresholds` that we generate/filter on. */
+const CUSTOM_THRESHOLD_FILTERABLE_FIELDS = ['user_id', 'threshold'] as const;
+
+type CustomThresholdFilterableField = (typeof CUSTOM_THRESHOLD_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single custom_thresholds record (wire shape, all strings). */
+const customThresholdRecordArb: fc.Arbitrary<Record<CustomThresholdFilterableField, string>> = fc.record({
+  user_id: smallValue,
+  threshold: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (custom_thresholds variant): for any set of custom_thresholds records and any subset of valid filter parameters drawn from an existing record's own field values, load('custom_thresholds', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (custom_thresholds): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(customThresholdRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...CUSTOM_THRESHOLD_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('custom_thresholds', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('custom_thresholds', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              CUSTOM_THRESHOLD_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
