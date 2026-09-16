@@ -57,6 +57,8 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
            /opt/yarn* 2>/dev/null || true; \
     addgroup -S emulator && adduser -S emulator -G emulator
 
+RUN mkdir -p /data && chown emulator:emulator /data
+
 COPY --chown=emulator:emulator package.json ./package.json
 COPY --chown=emulator:emulator api/package.json ./api/package.json
 

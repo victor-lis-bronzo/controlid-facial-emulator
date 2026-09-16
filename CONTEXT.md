@@ -31,3 +31,10 @@ _Avoid_: Frontend Container, React Image
 **Mono-repo Registry**:
 Estratégia de publicação no Docker Hub onde imagens distintas (API e Web) habitam o exato mesmo repositório, sendo separadas e identificadas apenas pelos prefixos de suas tags (ex: `:api-latest` e `:web-latest`).
 _Avoid_: Multi-repo, Split registry
+
+**Non-root Container**:
+Política de segurança aplicada às imagens Docker onde a aplicação e o container operam estritamente sem privilégios de root (`USER emulator`).
+_Avoid_: Root execution, su-exec entrypoints
+
+**Named Volumes Security**:
+Comportamento esperado onde os volumes nomeados (`emulator-data`) herdam a propriedade de pastas previamente criadas e chownadas no Dockerfile, garantindo persistência sem violar a política de Non-root.
