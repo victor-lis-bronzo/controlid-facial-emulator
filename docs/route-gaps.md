@@ -45,7 +45,9 @@ Each of these needs a dedicated Drizzle schema + `OBJECT_REGISTRY` entry per
 [spec #41](https://github.com/victor-lis-bronzo/controlid-facial-emulator/issues/41)
 (Padrão A, replicating `users`/`access_logs`/`change_logs`/`templates`/`cards`/
 `qrcodes`/`uhf_tags`/`pins`/`alarm_zones`/`user_roles`), tracked as individual
-tickets on GitHub Issues (#51–#76).
+tickets on GitHub Issues #50–#76 (ticket numbers don't run in the same order
+as this list — check each issue's title rather than assuming a range maps to
+a specific object; `user_roles` is done via #65, not #50).
 
 ## Action endpoints (not object CRUD)
 
