@@ -11,7 +11,7 @@ below is either implemented or a Route Gap — never a permanent "out of
 scope". See [CONTEXT.md](../CONTEXT.md) for the Documented Divergence /
 Route Gap distinction.
 
-## Implemented (16)
+## Implemented (17)
 
 | Object | Table | Repository |
 | --- | --- | --- |
@@ -31,11 +31,12 @@ Route Gap distinction.
 | `user_roles` | `userRoles` | `api/src/repositories/object-store.ts` |
 | `scheduled_unlocks` | `scheduledUnlocks` | `api/src/repositories/object-store.ts` |
 | `actions` | `actions` | `api/src/repositories/object-store.ts` |
+| `areas` | `areas` | `api/src/repositories/object-store.ts` |
 
-## Route Gaps (24)
+## Route Gaps (23)
 
 `user_groups`,
-`areas`, `portal_actions`, `portal_access_rules`, `group_access_rules`,
+`portal_actions`, `portal_access_rules`, `group_access_rules`,
 `time_spans`, `contingency_cards`, `contingency_card_access_rules`,
 `holidays`, `alarm_zone_time_zones`, `access_rule_time_zones`,
 `access_log_access_rules`, `alarm_logs`, `devices`, `user_access_rules`,

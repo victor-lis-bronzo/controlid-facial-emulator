@@ -46,6 +46,7 @@ import {
   userRoles,
   scheduledUnlocks,
   actions,
+  areas,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -192,6 +193,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       action: { column: actions.action, schemaKey: 'action', numeric: false },
       parameters: { column: actions.parameters, schemaKey: 'parameters', numeric: false },
       run_at: { column: actions.runAt, schemaKey: 'runAt', numeric: false },
+    },
+  },
+  areas: {
+    table: areas,
+    columns: {
+      id: { column: areas.id, schemaKey: 'id', numeric: true },
+      name: { column: areas.name, schemaKey: 'name', numeric: false },
     },
   },
 };

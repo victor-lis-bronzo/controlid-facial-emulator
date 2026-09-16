@@ -113,6 +113,11 @@ export const actions = sqliteTable('actions', {
   runAt: text('run_at').notNull(), // 0 device, 1 all devices, 2 server
 });
 
+export const areas = sqliteTable('areas', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

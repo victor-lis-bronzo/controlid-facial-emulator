@@ -138,6 +138,10 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     parameters TEXT NOT NULL,
     run_at TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS areas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,
