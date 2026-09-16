@@ -11,7 +11,7 @@ below is either implemented or a Route Gap — never a permanent "out of
 scope". See [CONTEXT.md](../CONTEXT.md) for the Documented Divergence /
 Route Gap distinction.
 
-## Implemented (26)
+## Implemented (27)
 
 | Object | Table | Repository |
 | --- | --- | --- |
@@ -41,8 +41,9 @@ Route Gap distinction.
 | `log_types` | `logTypes` | `api/src/repositories/object-store.ts` |
 | `sec_boxs` | `secBoxs` | `api/src/repositories/object-store.ts` |
 | `contacts` | `contacts` | `api/src/repositories/object-store.ts` |
+| `timed_alarms` | `timedAlarms` | `api/src/repositories/object-store.ts` |
 
-## Route Gaps (14)
+## Route Gaps (13)
 
 `user_groups`,
 `portal_actions`, `portal_access_rules`, `group_access_rules`,
@@ -50,7 +51,7 @@ Route Gap distinction.
 `alarm_zone_time_zones`, `access_rule_time_zones`,
 `access_log_access_rules`, `user_access_rules`,
 `area_access_rules`,
-`timed_alarms`, `access_events`, `custom_thresholds`,
+`access_events`, `custom_thresholds`,
 `network_interlocking_rules`
 
 Each of these needs a dedicated Drizzle schema + `OBJECT_REGISTRY` entry per

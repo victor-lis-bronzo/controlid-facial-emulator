@@ -1608,6 +1608,98 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — timed_alarms empty and no-match (Req 4.2)', () => {
+    const baseAlarm = {
+      name: 'Morning bell',
+      start: '28800',
+      sun: '0',
+      mon: '1',
+      tue: '1',
+      wed: '1',
+      thu: '1',
+      fri: '1',
+      sat: '0',
+    };
+
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('timed_alarms');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('timed_alarms', [baseAlarm]);
+      const rows = await store.load('timed_alarms', { name: 'nonexistent' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — timed_alarms filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('timed_alarms', [
+        { name: 'Morning bell', start: '28800', sun: '0', mon: '1', tue: '1', wed: '1', thu: '1', fri: '1', sat: '0' },
+      ]);
+      await expect(
+        store.load('timed_alarms', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('timed_alarms', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('timed_alarms CRUD happy path', () => {
+    const alarm1 = {
+      name: 'Morning bell',
+      start: '28800',
+      sun: '0',
+      mon: '1',
+      tue: '1',
+      wed: '1',
+      thu: '1',
+      fri: '1',
+      sat: '0',
+    };
+    const alarm2 = { ...alarm1, name: 'Evening bell', start: '64800' };
+
+    it('creates, loads, modifies, and destroys timed_alarms', async () => {
+      // create
+      const created = await store.create('timed_alarms', [alarm1, alarm2]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('timed_alarms');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.name === 'Morning bell');
+      expect(first).toMatchObject(alarm1);
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('timed_alarms', { name: 'Evening bell', start: '64800' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('timed_alarms', { start: '72000' }, { name: 'Evening bell' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('timed_alarms', { name: 'Evening bell' });
+      expect(afterModify[0]).toMatchObject({ start: '72000' });
+
+      // destroy
+      const destroyed = await store.destroy('timed_alarms', { name: 'Morning bell' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('timed_alarms');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ name: 'Evening bell' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('timed_alarms', [{ ...alarm1, nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

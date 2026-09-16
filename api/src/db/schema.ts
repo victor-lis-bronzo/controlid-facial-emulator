@@ -200,6 +200,19 @@ export const contacts = sqliteTable('contacts', {
   number: text('number'),
 });
 
+export const timedAlarms = sqliteTable('timed_alarms', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  start: text('start').notNull(),
+  sun: text('sun').notNull(),
+  mon: text('mon').notNull(),
+  tue: text('tue').notNull(),
+  wed: text('wed').notNull(),
+  thu: text('thu').notNull(),
+  fri: text('fri').notNull(),
+  sat: text('sat').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

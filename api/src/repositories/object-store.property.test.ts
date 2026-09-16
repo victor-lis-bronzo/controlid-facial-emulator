@@ -1682,3 +1682,95 @@ describe('ObjectStore.load — Property 10 (contacts): filtered queries return t
     );
   });
 });
+
+/** The wire columns of `timed_alarms` that we generate/filter on. */
+const TIMED_ALARM_FILTERABLE_FIELDS = [
+  'name',
+  'start',
+  'sun',
+  'mon',
+  'tue',
+  'wed',
+  'thu',
+  'fri',
+  'sat',
+] as const;
+
+type TimedAlarmFilterableField = (typeof TIMED_ALARM_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single timed_alarms record (wire shape, all strings). */
+const timedAlarmRecordArb: fc.Arbitrary<Record<TimedAlarmFilterableField, string>> = fc.record({
+  name: smallValue,
+  start: smallValue,
+  sun: smallValue,
+  mon: smallValue,
+  tue: smallValue,
+  wed: smallValue,
+  thu: smallValue,
+  fri: smallValue,
+  sat: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (timed_alarms variant): for any set of timed_alarms records and any subset of valid filter parameters drawn from an existing record's own field values, load('timed_alarms', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (timed_alarms): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(timedAlarmRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...TIMED_ALARM_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('timed_alarms', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('timed_alarms', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              TIMED_ALARM_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

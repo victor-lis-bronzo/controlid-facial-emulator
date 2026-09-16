@@ -1375,6 +1375,69 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad18.json()).toEqual({ contacts: [] });
   });
+
+  it('timed_alarms: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+    const alarm = {
+      name: 'Morning bell',
+      start: '28800',
+      sun: '0',
+      mon: '1',
+      tue: '1',
+      wed: '1',
+      thu: '1',
+      fri: '1',
+      sat: '0',
+    };
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'timed_alarms', values: [alarm] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'timed_alarms' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { timed_alarms: Record<string, unknown>[] };
+    expect(loaded.timed_alarms.length).toBe(1);
+    expect(loaded.timed_alarms[0].name).toBe('Morning bell');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'timed_alarms', values: { start: '72000' }, where: { name: 'Morning bell' } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'timed_alarms', where: { name: 'Morning bell' } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad19 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'timed_alarms' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad19.json()).toEqual({ timed_alarms: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

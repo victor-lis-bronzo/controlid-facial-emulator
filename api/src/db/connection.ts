@@ -212,6 +212,18 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     name TEXT,
     number TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS timed_alarms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    start TEXT NOT NULL,
+    sun TEXT NOT NULL,
+    mon TEXT NOT NULL,
+    tue TEXT NOT NULL,
+    wed TEXT NOT NULL,
+    thu TEXT NOT NULL,
+    fri TEXT NOT NULL,
+    sat TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

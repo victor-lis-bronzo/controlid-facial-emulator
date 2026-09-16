@@ -56,6 +56,7 @@ import {
   logTypes,
   secBoxs,
   contacts,
+  timedAlarms,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -314,6 +315,21 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       id: { column: contacts.id, schemaKey: 'id', numeric: true },
       name: { column: contacts.name, schemaKey: 'name', numeric: false },
       number: { column: contacts.number, schemaKey: 'number', numeric: false },
+    },
+  },
+  timed_alarms: {
+    table: timedAlarms,
+    columns: {
+      id: { column: timedAlarms.id, schemaKey: 'id', numeric: true },
+      name: { column: timedAlarms.name, schemaKey: 'name', numeric: false },
+      start: { column: timedAlarms.start, schemaKey: 'start', numeric: false },
+      sun: { column: timedAlarms.sun, schemaKey: 'sun', numeric: false },
+      mon: { column: timedAlarms.mon, schemaKey: 'mon', numeric: false },
+      tue: { column: timedAlarms.tue, schemaKey: 'tue', numeric: false },
+      wed: { column: timedAlarms.wed, schemaKey: 'wed', numeric: false },
+      thu: { column: timedAlarms.thu, schemaKey: 'thu', numeric: false },
+      fri: { column: timedAlarms.fri, schemaKey: 'fri', numeric: false },
+      sat: { column: timedAlarms.sat, schemaKey: 'sat', numeric: false },
     },
   },
 };
