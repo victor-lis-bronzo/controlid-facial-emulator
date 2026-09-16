@@ -41,9 +41,11 @@ The database uses SQLite and models device internal state with nine main tables:
 - `timeZones`: Named weekly schedules built from time ranges (admin panel).
 - `accessRules`: Compositions associating Groups, Time Zones, and Portals (admin panel).
 
-The official Access API documents ~40 object types in total (`cards`, `templates`,
-`areas`, `devices`, `holidays`, etc.); only the nine above are implemented today. The
-rest are tracked as Route Gaps against
+The official Access API documents ~40 object types in total; only 6 of them
+(`users`, `groups`, `portals`, `time_zones`, `access_rules`, `access_logs`)
+are implemented today. The full object-by-object breakdown, and the
+remaining action endpoints, are tracked in
+[docs/route-gaps.md](route-gaps.md) against
 [ADR 0002](adr/0002-full-route-coverage-mocked-hardware.md), not as
 divergences — see [CONTEXT.md](../CONTEXT.md) for the distinction.
 
