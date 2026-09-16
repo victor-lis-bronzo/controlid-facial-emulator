@@ -181,6 +181,11 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     access_log_id TEXT,
     door_id TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    ip TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

@@ -1115,6 +1115,58 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad13.json()).toEqual({ alarm_logs: [] });
   });
+
+  it('devices: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'devices', values: [{ name: 'Front door', ip: '192.168.0.10' }] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'devices' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { devices: Record<string, unknown>[] };
+    expect(loaded.devices.length).toBe(1);
+    expect(loaded.devices[0].name).toBe('Front door');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'devices', values: { ip: '10.0.0.1' }, where: { name: 'Front door' } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'devices', where: { name: 'Front door' } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad14 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'devices' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad14.json()).toEqual({ devices: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

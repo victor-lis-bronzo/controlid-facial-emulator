@@ -161,6 +161,12 @@ export const alarmLogs = sqliteTable('alarm_logs', {
   doorId: text('door_id'),
 });
 
+export const devices = sqliteTable('devices', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  ip: text('ip').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

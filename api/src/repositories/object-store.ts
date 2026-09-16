@@ -51,6 +51,7 @@ import {
   contingencyCards,
   holidays,
   alarmLogs,
+  devices,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -255,6 +256,14 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       time: { column: alarmLogs.time, schemaKey: 'time', numeric: false },
       access_log_id: { column: alarmLogs.accessLogId, schemaKey: 'accessLogId', numeric: false },
       door_id: { column: alarmLogs.doorId, schemaKey: 'doorId', numeric: false },
+    },
+  },
+  devices: {
+    table: devices,
+    columns: {
+      id: { column: devices.id, schemaKey: 'id', numeric: true },
+      name: { column: devices.name, schemaKey: 'name', numeric: false },
+      ip: { column: devices.ip, schemaKey: 'ip', numeric: false },
     },
   },
 };

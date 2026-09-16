@@ -1272,6 +1272,74 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — devices empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('devices');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('devices', [{ name: 'Front door', ip: '192.168.0.10' }]);
+      const rows = await store.load('devices', { name: 'nonexistent' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — devices filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('devices', [{ name: 'Front door', ip: '192.168.0.10' }]);
+      await expect(
+        store.load('devices', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('devices', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('devices CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys devices', async () => {
+      // create
+      const created = await store.create('devices', [
+        { name: 'Front door', ip: '192.168.0.10' },
+        { name: 'Back door', ip: '192.168.0.11' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('devices');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.name === 'Front door');
+      expect(first).toMatchObject({ name: 'Front door', ip: '192.168.0.10' });
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('devices', { name: 'Back door', ip: '192.168.0.11' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('devices', { ip: '192.168.0.99' }, { name: 'Back door' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('devices', { name: 'Back door' });
+      expect(afterModify[0]).toMatchObject({ ip: '192.168.0.99' });
+
+      // destroy
+      const destroyed = await store.destroy('devices', { name: 'Front door' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('devices');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ name: 'Back door' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('devices', [{ name: 'x', ip: '0.0.0.0', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {
