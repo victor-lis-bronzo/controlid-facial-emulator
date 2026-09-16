@@ -59,6 +59,7 @@ import {
   timedAlarms,
   accessEvents,
   customThresholds,
+  usersGroups,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -351,6 +352,16 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       id: { column: customThresholds.id, schemaKey: 'id', numeric: true },
       user_id: { column: customThresholds.userId, schemaKey: 'userId', numeric: false },
       threshold: { column: customThresholds.threshold, schemaKey: 'threshold', numeric: false },
+    },
+  },
+  // Reuses the admin-panel's `users_groups` table (Padrão B) — same
+  // real-world association, exposed here through the device wire protocol
+  // for fidelity: editing it via either interface affects the same rows.
+  user_groups: {
+    table: usersGroups,
+    columns: {
+      user_id: { column: usersGroups.userId, schemaKey: 'userId', numeric: true },
+      group_id: { column: usersGroups.groupId, schemaKey: 'groupId', numeric: true },
     },
   },
 };

@@ -1543,6 +1543,73 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad21.json()).toEqual({ custom_thresholds: [] });
   });
+
+  it('user_groups: full create → load → modify → destroy cycle (reuses users_groups)', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const userCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'users', values: [{ registration: '1', name: 'A' }] },
+      headers: jsonHeaders(),
+    });
+    const userId = (userCreate.json() as { ids: number[] }).ids[0];
+
+    const groupResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/groups?session=${token}`,
+      payload: { name: 'G1' },
+      headers: jsonHeaders(),
+    });
+    const groupId = (groupResponse.json() as { id: number }).id;
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'user_groups',
+        values: [{ user_id: String(userId), group_id: String(groupId) }],
+      },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'user_groups' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { user_groups: Record<string, unknown>[] };
+    expect(loaded.user_groups.length).toBe(1);
+    expect(loaded.user_groups[0].group_id).toBe(String(groupId));
+
+    // visible from the admin-panel too — same underlying table
+    const groupView = await harness.app.inject({
+      method: 'GET',
+      url: `/api/admin/groups/${groupId}`,
+    });
+    expect((groupView.json() as { members: unknown[] }).members).toHaveLength(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'user_groups', where: { group_id: String(groupId) } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad22 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'user_groups' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad22.json()).toEqual({ user_groups: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

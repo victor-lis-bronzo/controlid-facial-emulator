@@ -13,6 +13,7 @@ import { ObjectStore } from './object-store.js';
 import { UserRepository } from './user-repository.js';
 import { InMemoryPhotoStorage } from './photo-storage-memory.js';
 import { ValidationError } from './errors.js';
+import { groups } from '../db/schema.js';
 
 describe('ObjectStore', () => {
   let db: DrizzleDb;
@@ -1839,6 +1840,66 @@ describe('ObjectStore', () => {
     it('throws ValidationError when creating with an unknown column', async () => {
       await expect(
         store.create('custom_thresholds', [{ user_id: '1', threshold: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
+
+  describe('user_groups (reuses the admin-panel users_groups table)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('user_groups');
+      expect(rows).toEqual([]);
+    });
+
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await expect(
+        store.load('user_groups', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('user_groups', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+
+    it('creates, loads, modifies, and destroys user_groups, visible from the admin-panel table too', async () => {
+      const userCreated = await store.create('users', [{ registration: '1', name: 'A' }]);
+      const userId = userCreated.ids[0];
+      const group1Id = Number(db.insert(groups).values({ name: 'G1' }).run().lastInsertRowid);
+      const group2Id = Number(db.insert(groups).values({ name: 'G2' }).run().lastInsertRowid);
+
+      // create
+      const created = await store.create('user_groups', [
+        { user_id: String(userId), group_id: String(group1Id) },
+      ]);
+      expect(created.ids).toHaveLength(1);
+
+      // load all
+      const all = await store.load('user_groups');
+      expect(all).toHaveLength(1);
+      expect(all[0]).toMatchObject({ user_id: String(userId), group_id: String(group1Id) });
+
+      // visible via the admin-panel's underlying table too (same row)
+      const rawRows = db.select().from(groups).all();
+      expect(rawRows.map((g) => g.id).sort()).toEqual([group1Id, group2Id].sort());
+
+      // modify — move the association from group1 to group2
+      const modified = await store.modify(
+        'user_groups',
+        { group_id: String(group2Id) },
+        { user_id: String(userId), group_id: String(group1Id) },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('user_groups', { group_id: String(group2Id) });
+      expect(afterModify).toHaveLength(1);
+
+      // destroy
+      const destroyed = await store.destroy('user_groups', { group_id: String(group2Id) });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('user_groups');
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('user_groups', [{ user_id: '1', group_id: '1', nope: 'x' }]),
       ).rejects.toThrowError(/nope/);
     });
   });

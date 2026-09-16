@@ -8,6 +8,7 @@ import { describe, it } from 'vitest';
 import fc from 'fast-check';
 import { createDb } from '../db/connection.js';
 import { ObjectStore } from './object-store.js';
+import { groups } from '../db/schema.js';
 
 /**
  * The wire columns of `access_logs` that we generate/filter on. `id` is
@@ -1924,6 +1925,86 @@ describe('ObjectStore.load — Property 10 (custom_thresholds): filtered queries
         },
       ),
       { numRuns: 150 },
+    );
+  });
+});
+
+// Feature: controlid-facial-emulator, Property 10 (user_groups variant): for any set of user_groups associations (reusing the admin-panel users_groups table) and any subset of valid filter parameters drawn from an existing record's own field values, load('user_groups', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (user_groups): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        // Pairs of (userIndex, groupIndex) drawn from a small pool, deduped
+        // so no composite PK collides.
+        fc.uniqueArray(fc.tuple(fc.nat({ max: 5 }), fc.nat({ max: 5 })), {
+          selector: ([userIdx, groupIdx]) => `${userIdx}${groupIdx}`,
+          minLength: 1,
+          maxLength: 12,
+        }),
+        fc.nat(),
+        fc.boolean(),
+        async (pairs, pivotSeed, filterByUser) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+
+            const userIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              const created = await store.create('users', [{ registration: String(i), name: `U${i}` }]);
+              userIds.push(created.ids[0]);
+            }
+            const groupIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              groupIds.push(Number(db.insert(groups).values({ name: `G${i}` }).run().lastInsertRowid));
+            }
+
+            const records = pairs.map(([userIdx, groupIdx]) => ({
+              user_id: String(userIds[userIdx]),
+              group_id: String(groupIds[groupIdx]),
+            }));
+            await store.create('user_groups', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const field = filterByUser ? 'user_id' : 'group_id';
+            const filters: Record<string, string> = { [field]: pivot[field] };
+
+            const expected = records.filter((rec) => rec[field] === pivot[field]);
+
+            const loaded = await store.load('user_groups', filters);
+
+            const key = (r: Record<string, unknown>): string => `${r.user_id}\u0001${r.group_id}`;
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 100 },
     );
   });
 });
