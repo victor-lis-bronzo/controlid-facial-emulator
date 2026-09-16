@@ -1340,6 +1340,75 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — catra_infos empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('catra_infos');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('catra_infos', [{ left_turns: '10' }]);
+      const rows = await store.load('catra_infos', { left_turns: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — catra_infos filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('catra_infos', [{ left_turns: '10' }]);
+      await expect(
+        store.load('catra_infos', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('catra_infos', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('catra_infos CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys catra_infos', async () => {
+      // create
+      const created = await store.create('catra_infos', [
+        { left_turns: '10', right_turns: '5', entrance_turns: '8', exit_turns: '7' },
+        {},
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('catra_infos');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.left_turns === '10');
+      expect(first).toMatchObject({ left_turns: '10', right_turns: '5' });
+      expect(typeof first?.id).toBe('string');
+      const second = all.find((r) => r.left_turns === null);
+      expect(second).toBeDefined();
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('catra_infos', { left_turns: '10', right_turns: '5' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('catra_infos', { left_turns: '99' }, { left_turns: '10' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('catra_infos', { left_turns: '99' });
+      expect(afterModify).toHaveLength(1);
+
+      // destroy
+      const destroyed = await store.destroy('catra_infos', { left_turns: '99' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('catra_infos');
+      expect(remaining).toHaveLength(1);
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('catra_infos', [{ left_turns: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

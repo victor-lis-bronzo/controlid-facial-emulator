@@ -186,6 +186,13 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     name TEXT NOT NULL,
     ip TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS catra_infos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    left_turns TEXT,
+    right_turns TEXT,
+    entrance_turns TEXT,
+    exit_turns TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

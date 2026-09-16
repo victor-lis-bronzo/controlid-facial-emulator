@@ -52,6 +52,7 @@ import {
   holidays,
   alarmLogs,
   devices,
+  catraInfos,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -264,6 +265,16 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       id: { column: devices.id, schemaKey: 'id', numeric: true },
       name: { column: devices.name, schemaKey: 'name', numeric: false },
       ip: { column: devices.ip, schemaKey: 'ip', numeric: false },
+    },
+  },
+  catra_infos: {
+    table: catraInfos,
+    columns: {
+      id: { column: catraInfos.id, schemaKey: 'id', numeric: true },
+      left_turns: { column: catraInfos.leftTurns, schemaKey: 'leftTurns', numeric: false },
+      right_turns: { column: catraInfos.rightTurns, schemaKey: 'rightTurns', numeric: false },
+      entrance_turns: { column: catraInfos.entranceTurns, schemaKey: 'entranceTurns', numeric: false },
+      exit_turns: { column: catraInfos.exitTurns, schemaKey: 'exitTurns', numeric: false },
     },
   },
 };

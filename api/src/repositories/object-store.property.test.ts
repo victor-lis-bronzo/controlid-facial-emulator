@@ -1367,3 +1367,80 @@ describe('ObjectStore.load — Property 10 (devices): filtered queries return th
     );
   });
 });
+
+/** The wire columns of `catra_infos` that we generate/filter on. */
+const CATRA_INFO_FILTERABLE_FIELDS = ['left_turns', 'right_turns', 'entrance_turns', 'exit_turns'] as const;
+
+type CatraInfoFilterableField = (typeof CATRA_INFO_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single catra_infos record (wire shape, all strings). */
+const catraInfoRecordArb: fc.Arbitrary<Record<CatraInfoFilterableField, string>> = fc.record({
+  left_turns: smallValue,
+  right_turns: smallValue,
+  entrance_turns: smallValue,
+  exit_turns: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (catra_infos variant): for any set of catra_infos records and any subset of valid filter parameters drawn from an existing record's own field values, load('catra_infos', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (catra_infos): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(catraInfoRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...CATRA_INFO_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('catra_infos', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('catra_infos', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              CATRA_INFO_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

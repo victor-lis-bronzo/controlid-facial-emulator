@@ -167,6 +167,14 @@ export const devices = sqliteTable('devices', {
   ip: text('ip').notNull(),
 });
 
+export const catraInfos = sqliteTable('catra_infos', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  leftTurns: text('left_turns'),
+  rightTurns: text('right_turns'),
+  entranceTurns: text('entrance_turns'),
+  exitTurns: text('exit_turns'),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms
