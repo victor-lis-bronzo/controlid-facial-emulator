@@ -1438,6 +1438,59 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad19.json()).toEqual({ timed_alarms: [] });
   });
+
+  it('access_events: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+    const event = { event: 'door', type: 'OPEN', identification: 'd1', device_id: '1', timestamp: '1000' };
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'access_events', values: [event] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'access_events' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { access_events: Record<string, unknown>[] };
+    expect(loaded.access_events.length).toBe(1);
+    expect(loaded.access_events[0].type).toBe('OPEN');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'access_events', values: { type: 'CLOSE' }, where: { event: 'door' } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'access_events', where: { event: 'door' } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad20 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'access_events' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad20.json()).toEqual({ access_events: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

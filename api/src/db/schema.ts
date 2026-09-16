@@ -213,6 +213,15 @@ export const timedAlarms = sqliteTable('timed_alarms', {
   sat: text('sat').notNull(),
 });
 
+export const accessEvents = sqliteTable('access_events', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  event: text('event').notNull(), // catra, secbox, or door
+  type: text('type').notNull(), // TURN_LEFT/TURN_RIGHT/GIVE_UP/OPEN/CLOSE
+  identification: text('identification').notNull(),
+  deviceId: text('device_id').notNull(),
+  timestamp: text('timestamp').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

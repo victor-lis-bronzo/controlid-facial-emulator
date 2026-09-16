@@ -224,6 +224,14 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     fri TEXT NOT NULL,
     sat TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS access_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,
+    type TEXT NOT NULL,
+    identification TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

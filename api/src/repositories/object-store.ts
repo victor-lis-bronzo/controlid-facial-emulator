@@ -57,6 +57,7 @@ import {
   secBoxs,
   contacts,
   timedAlarms,
+  accessEvents,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -330,6 +331,17 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       thu: { column: timedAlarms.thu, schemaKey: 'thu', numeric: false },
       fri: { column: timedAlarms.fri, schemaKey: 'fri', numeric: false },
       sat: { column: timedAlarms.sat, schemaKey: 'sat', numeric: false },
+    },
+  },
+  access_events: {
+    table: accessEvents,
+    columns: {
+      id: { column: accessEvents.id, schemaKey: 'id', numeric: true },
+      event: { column: accessEvents.event, schemaKey: 'event', numeric: false },
+      type: { column: accessEvents.type, schemaKey: 'type', numeric: false },
+      identification: { column: accessEvents.identification, schemaKey: 'identification', numeric: false },
+      device_id: { column: accessEvents.deviceId, schemaKey: 'deviceId', numeric: false },
+      timestamp: { column: accessEvents.timestamp, schemaKey: 'timestamp', numeric: false },
     },
   },
 };

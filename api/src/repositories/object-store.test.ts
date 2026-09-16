@@ -1700,6 +1700,80 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — access_events empty and no-match (Req 4.2)', () => {
+    const baseEvent = { event: 'door', type: 'OPEN', identification: 'd1', device_id: '1', timestamp: '1000' };
+
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('access_events');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('access_events', [baseEvent]);
+      const rows = await store.load('access_events', { device_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — access_events filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('access_events', [
+        { event: 'door', type: 'OPEN', identification: 'd1', device_id: '1', timestamp: '1000' },
+      ]);
+      await expect(
+        store.load('access_events', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('access_events', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('access_events CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys access_events', async () => {
+      // create
+      const created = await store.create('access_events', [
+        { event: 'door', type: 'OPEN', identification: 'd1', device_id: '1', timestamp: '1000' },
+        { event: 'catra', type: 'TURN_LEFT', identification: 'c1', device_id: '2', timestamp: '2000' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('access_events');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.event === 'door');
+      expect(first).toMatchObject({ event: 'door', type: 'OPEN', device_id: '1' });
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('access_events', { event: 'catra', device_id: '2' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('access_events', { type: 'CLOSE' }, { event: 'door' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('access_events', { event: 'door' });
+      expect(afterModify[0]).toMatchObject({ type: 'CLOSE' });
+
+      // destroy
+      const destroyed = await store.destroy('access_events', { event: 'catra' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('access_events');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ event: 'door' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('access_events', [
+          { event: 'door', type: 'OPEN', identification: 'd1', device_id: '1', timestamp: '1000', nope: 'x' },
+        ]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

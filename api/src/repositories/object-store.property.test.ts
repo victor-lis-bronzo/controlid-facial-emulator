@@ -1774,3 +1774,81 @@ describe('ObjectStore.load — Property 10 (timed_alarms): filtered queries retu
     );
   });
 });
+
+/** The wire columns of `access_events` that we generate/filter on. */
+const ACCESS_EVENT_FILTERABLE_FIELDS = ['event', 'type', 'identification', 'device_id', 'timestamp'] as const;
+
+type AccessEventFilterableField = (typeof ACCESS_EVENT_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single access_events record (wire shape, all strings). */
+const accessEventRecordArb: fc.Arbitrary<Record<AccessEventFilterableField, string>> = fc.record({
+  event: smallValue,
+  type: smallValue,
+  identification: smallValue,
+  device_id: smallValue,
+  timestamp: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (access_events variant): for any set of access_events records and any subset of valid filter parameters drawn from an existing record's own field values, load('access_events', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (access_events): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(accessEventRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...ACCESS_EVENT_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('access_events', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('access_events', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              ACCESS_EVENT_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
