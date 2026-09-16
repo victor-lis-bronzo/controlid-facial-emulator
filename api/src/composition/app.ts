@@ -39,6 +39,8 @@ import { registerControlPanelRoutes } from '../routes/control-panel/control-pane
 import { registerInterceptionRoutes } from '../routes/interception/interception-routes.js';
 import { registerAdminRoutes } from '../routes/admin/admin-routes.js';
 import { registerStaticAssets } from '../routes/static.js';
+import fastifyMultipart from '@fastify/multipart';
+import { MAX_PHOTO_BYTES } from '../routes/photo-validation.js';
 
 /** Symbol-free property name used to stash the raw request body for the tap. */
 const RAW_BODY_KEY = 'rawBody';
@@ -116,6 +118,13 @@ export async function buildApp(
   options: BuildAppOptions = {},
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: options.logger ?? false });
+
+  // --- Global plugins ---
+  // Multipart capped at 5 MB / single file (Req 3.3).
+  await app.register(fastifyMultipart, {
+    limits: { fileSize: MAX_PHOTO_BYTES, files: 1 },
+    throwFileSizeLimit: true,
+  });
 
   // --- Body parsers (raw-body-preserving, tolerant of malformed JSON). ---
 

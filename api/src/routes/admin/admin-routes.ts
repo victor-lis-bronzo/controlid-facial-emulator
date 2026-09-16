@@ -25,7 +25,6 @@
  * `toBuffer()` raise `FST_REQ_FILE_TOO_LARGE` (a 413 `FastifyError`) rather than
  * silently truncating.
  */
-import fastifyMultipart from '@fastify/multipart';
 import type {
   FastifyInstance,
   FastifyReply,
@@ -138,14 +137,6 @@ export async function registerAdminRoutes(
   container: Container,
   requireSession: preHandlerHookHandler,
 ): Promise<void> {
-  // Multipart, scoped to this registration, capped at 5 MB / single file. The
-  // `throwFileSizeLimit` flag makes `toBuffer()` raise FST_REQ_FILE_TOO_LARGE
-  // (a 413 FastifyError) when the part exceeds the cap (Req 3.3).
-  await app.register(fastifyMultipart, {
-    limits: { fileSize: MAX_PHOTO_BYTES, files: 1 },
-    throwFileSizeLimit: true,
-  });
-
   registerUserRoutes(app, container, requireSession);
   registerGroupRoutes(app, container, requireSession);
   registerPortalRoutes(app, container, requireSession);

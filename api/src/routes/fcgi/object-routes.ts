@@ -30,7 +30,6 @@
  * The image route is protected; `new_user_identified` is unprotected (it models
  * the device's own callback to a server).
  */
-import fastifyMultipart from '@fastify/multipart';
 import type {
   FastifyInstance,
   FastifyReply,
@@ -102,15 +101,6 @@ export async function registerObjectRoutes(
   resolved: ResolvedConfig,
   requireSession: preHandlerHookHandler,
 ): Promise<void> {
-  // Multipart, scoped to this registration, capped at 5 MB / single file. See
-  // `admin-routes.ts`'s identical registration: Fastify decorators from one
-  // `register()` call do not cross into a route declared in a different one,
-  // so `user_set_image.fcgi` needs its own scoped registration.
-  await app.register(fastifyMultipart, {
-    limits: { fileSize: MAX_PHOTO_BYTES, files: 1 },
-    throwFileSizeLimit: true,
-  });
-
   app.post(
     '/create_objects.fcgi',
     { preHandler: requireSession },
