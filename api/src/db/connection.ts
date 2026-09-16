@@ -131,6 +131,13 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     name TEXT NOT NULL,
     message TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS actions (
+    group_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    action TEXT NOT NULL,
+    parameters TEXT NOT NULL,
+    run_at TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

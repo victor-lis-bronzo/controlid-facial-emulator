@@ -807,3 +807,81 @@ describe('ObjectStore.load — Property 10 (scheduled_unlocks): filtered queries
     );
   });
 });
+
+/** The wire columns of `actions` that we generate/filter on (excluding `group_id`, the PK). */
+const ACTION_FILTERABLE_FIELDS = ['name', 'action', 'parameters', 'run_at'] as const;
+
+type ActionFilterableField = (typeof ACTION_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single actions record (wire shape, all strings; `group_id` assigned by the test). */
+const actionRecordArb: fc.Arbitrary<Record<ActionFilterableField, string>> = fc.record({
+  name: smallValue,
+  action: smallValue,
+  parameters: smallValue,
+  run_at: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (actions variant): for any set of actions records and any subset of valid filter parameters drawn from an existing record's own field values, load('actions', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (actions): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(actionRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...ACTION_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (bareRecords, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            const records = bareRecords.map((rec, i) => ({ ...rec, group_id: String(i + 1) }));
+            await store.create('actions', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('actions', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              [...ACTION_FILTERABLE_FIELDS, 'group_id'].map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

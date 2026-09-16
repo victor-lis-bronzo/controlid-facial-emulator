@@ -103,6 +103,16 @@ export const scheduledUnlocks = sqliteTable('scheduled_unlocks', {
   message: text('message'),
 });
 
+// `group_id` (not `id`) is the device-assigned primary key for this object,
+// per docs/route-gaps-field-reference.md.
+export const actions = sqliteTable('actions', {
+  groupId: integer('group_id').primaryKey(),
+  name: text('name').notNull(),
+  action: text('action').notNull(),
+  parameters: text('parameters').notNull(),
+  runAt: text('run_at').notNull(), // 0 device, 1 all devices, 2 server
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

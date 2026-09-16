@@ -793,6 +793,78 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — actions empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('actions');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('actions', [
+        { group_id: '1', name: 'Open door', action: 'open.sh', parameters: '', run_at: '0' },
+      ]);
+      const rows = await store.load('actions', { group_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — actions filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('actions', [
+        { group_id: '1', name: 'Open door', action: 'open.sh', parameters: '', run_at: '0' },
+      ]);
+      await expect(
+        store.load('actions', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('actions', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('actions CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys actions', async () => {
+      // create — `group_id` is the device-assigned identifier, not store-generated
+      const created = await store.create('actions', [
+        { group_id: '1', name: 'Open door', action: 'open.sh', parameters: '', run_at: '0' },
+        { group_id: '2', name: 'Close door', action: 'close.sh', parameters: '', run_at: '1' },
+      ]);
+      expect(created.ids).toEqual([1, 2]);
+
+      // load all
+      const all = await store.load('actions');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.group_id === '1');
+      expect(first).toMatchObject({ group_id: '1', name: 'Open door', action: 'open.sh' });
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('actions', { group_id: '2', run_at: '1' });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]).toMatchObject({ group_id: '2' });
+
+      // modify
+      const modified = await store.modify('actions', { run_at: '2' }, { group_id: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('actions', { group_id: '2' });
+      expect(afterModify[0]).toMatchObject({ run_at: '2' });
+
+      // destroy
+      const destroyed = await store.destroy('actions', { group_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('actions');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ group_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('actions', [
+          { group_id: '1', name: 'x', action: 'x', parameters: '', run_at: '0', nope: 'x' },
+        ]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {
