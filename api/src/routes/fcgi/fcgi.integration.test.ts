@@ -1610,6 +1610,76 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad22.json()).toEqual({ user_groups: [] });
   });
+
+  it('portal_access_rules: full create → load → modify → destroy cycle (reuses access_rule_portals)', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const portalResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/portals?session=${token}`,
+      payload: { name: 'P1' },
+      headers: jsonHeaders(),
+    });
+    const portalId = (portalResponse.json() as { id: number }).id;
+
+    const groupResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/groups?session=${token}`,
+      payload: { name: 'G1' },
+      headers: jsonHeaders(),
+    });
+    const groupId = (groupResponse.json() as { id: number }).id;
+
+    // groupIds satisfies the "must reference at least one entity" rule
+    // without pre-associating a portal, so the .fcgi create below is fresh.
+    const ruleResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/access-rules?session=${token}`,
+      payload: { name: 'R1', groupIds: [groupId] },
+      headers: jsonHeaders(),
+    });
+    const ruleId = (ruleResponse.json() as { id: number }).id;
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'portal_access_rules',
+        values: [{ portal_id: String(portalId), access_rule_id: String(ruleId) }],
+      },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'portal_access_rules' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { portal_access_rules: Record<string, unknown>[] };
+    expect(loaded.portal_access_rules.length).toBe(1);
+    expect(loaded.portal_access_rules[0].access_rule_id).toBe(String(ruleId));
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'portal_access_rules', where: { portal_id: String(portalId) } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad23 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'portal_access_rules' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad23.json()).toEqual({ portal_access_rules: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

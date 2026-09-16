@@ -60,6 +60,7 @@ import {
   accessEvents,
   customThresholds,
   usersGroups,
+  accessRulePortals,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -362,6 +363,19 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       user_id: { column: usersGroups.userId, schemaKey: 'userId', numeric: true },
       group_id: { column: usersGroups.groupId, schemaKey: 'groupId', numeric: true },
+    },
+  },
+  // Reuses the admin-panel's `access_rule_portals` table (Padrão B) — same
+  // real-world association, exposed here through the device wire protocol.
+  portal_access_rules: {
+    table: accessRulePortals,
+    columns: {
+      portal_id: { column: accessRulePortals.portalId, schemaKey: 'portalId', numeric: true },
+      access_rule_id: {
+        column: accessRulePortals.accessRuleId,
+        schemaKey: 'accessRuleId',
+        numeric: true,
+      },
     },
   },
 };

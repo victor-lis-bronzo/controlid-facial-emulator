@@ -8,7 +8,7 @@ import { describe, it } from 'vitest';
 import fc from 'fast-check';
 import { createDb } from '../db/connection.js';
 import { ObjectStore } from './object-store.js';
-import { groups } from '../db/schema.js';
+import { groups, portals, accessRules } from '../db/schema.js';
 
 /**
  * The wire columns of `access_logs` that we generate/filter on. `id` is
@@ -1973,6 +1973,83 @@ describe('ObjectStore.load — Property 10 (user_groups): filtered queries retur
             const loaded = await store.load('user_groups', filters);
 
             const key = (r: Record<string, unknown>): string => `${r.user_id}\u0001${r.group_id}`;
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
+// Feature: controlid-facial-emulator, Property 10 (portal_access_rules variant): for any set of portal_access_rules associations (reusing the admin-panel access_rule_portals table) and any subset of valid filter parameters drawn from an existing record's own field values, load('portal_access_rules', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (portal_access_rules): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.uniqueArray(fc.tuple(fc.nat({ max: 5 }), fc.nat({ max: 5 })), {
+          selector: ([portalIdx, ruleIdx]) => `${portalIdx}\u0001${ruleIdx}`,
+          minLength: 1,
+          maxLength: 12,
+        }),
+        fc.nat(),
+        fc.boolean(),
+        async (pairs, pivotSeed, filterByPortal) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+
+            const portalIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              portalIds.push(Number(db.insert(portals).values({ name: `P${i}` }).run().lastInsertRowid));
+            }
+            const ruleIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              ruleIds.push(Number(db.insert(accessRules).values({ name: `R${i}` }).run().lastInsertRowid));
+            }
+
+            const records = pairs.map(([portalIdx, ruleIdx]) => ({
+              portal_id: String(portalIds[portalIdx]),
+              access_rule_id: String(ruleIds[ruleIdx]),
+            }));
+            await store.create('portal_access_rules', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const field = filterByPortal ? 'portal_id' : 'access_rule_id';
+            const filters: Record<string, string> = { [field]: pivot[field] };
+
+            const expected = records.filter((rec) => rec[field] === pivot[field]);
+
+            const loaded = await store.load('portal_access_rules', filters);
+
+            const key = (r: Record<string, unknown>): string => `${r.portal_id}\u0001${r.access_rule_id}`;
 
             const expectedCounts = new Map<string, number>();
             for (const r of expected) {

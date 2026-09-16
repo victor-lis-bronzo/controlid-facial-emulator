@@ -13,7 +13,7 @@ import { ObjectStore } from './object-store.js';
 import { UserRepository } from './user-repository.js';
 import { InMemoryPhotoStorage } from './photo-storage-memory.js';
 import { ValidationError } from './errors.js';
-import { groups } from '../db/schema.js';
+import { groups, portals, accessRules } from '../db/schema.js';
 
 describe('ObjectStore', () => {
   let db: DrizzleDb;
@@ -1900,6 +1900,61 @@ describe('ObjectStore', () => {
     it('throws ValidationError when creating with an unknown column', async () => {
       await expect(
         store.create('user_groups', [{ user_id: '1', group_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
+
+  describe('portal_access_rules (reuses the admin-panel access_rule_portals table)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('portal_access_rules');
+      expect(rows).toEqual([]);
+    });
+
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await expect(
+        store.load('portal_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('portal_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+
+    it('creates, loads, modifies, and destroys portal_access_rules', async () => {
+      const portal1Id = Number(db.insert(portals).values({ name: 'P1' }).run().lastInsertRowid);
+      const portal2Id = Number(db.insert(portals).values({ name: 'P2' }).run().lastInsertRowid);
+      const ruleId = Number(db.insert(accessRules).values({ name: 'R1' }).run().lastInsertRowid);
+
+      // create
+      const created = await store.create('portal_access_rules', [
+        { portal_id: String(portal1Id), access_rule_id: String(ruleId) },
+      ]);
+      expect(created.ids).toHaveLength(1);
+
+      // load all
+      const all = await store.load('portal_access_rules');
+      expect(all).toHaveLength(1);
+      expect(all[0]).toMatchObject({ portal_id: String(portal1Id), access_rule_id: String(ruleId) });
+
+      // modify — move the rule from portal1 to portal2
+      const modified = await store.modify(
+        'portal_access_rules',
+        { portal_id: String(portal2Id) },
+        { portal_id: String(portal1Id), access_rule_id: String(ruleId) },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('portal_access_rules', { portal_id: String(portal2Id) });
+      expect(afterModify).toHaveLength(1);
+
+      // destroy
+      const destroyed = await store.destroy('portal_access_rules', { portal_id: String(portal2Id) });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('portal_access_rules');
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('portal_access_rules', [{ portal_id: '1', access_rule_id: '1', nope: 'x' }]),
       ).rejects.toThrowError(/nope/);
     });
   });
