@@ -162,6 +162,16 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     value TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS holidays (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    start TEXT NOT NULL,
+    end TEXT NOT NULL,
+    hol1 TEXT NOT NULL,
+    hol2 TEXT NOT NULL,
+    hol3 TEXT NOT NULL,
+    repeats TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

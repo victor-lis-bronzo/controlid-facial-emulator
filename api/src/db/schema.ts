@@ -140,6 +140,17 @@ export const contingencyCards = sqliteTable('contingency_cards', {
   value: text('value').notNull(),
 });
 
+export const holidays = sqliteTable('holidays', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  start: text('start').notNull(),
+  end: text('end').notNull(),
+  hol1: text('hol1').notNull(),
+  hol2: text('hol2').notNull(),
+  hol3: text('hol3').notNull(),
+  repeats: text('repeats').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

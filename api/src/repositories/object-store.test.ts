@@ -1114,6 +1114,94 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — holidays empty and no-match (Req 4.2)', () => {
+    const baseHoliday = {
+      name: 'New Year',
+      start: '0',
+      end: '86400',
+      hol1: '1',
+      hol2: '0',
+      hol3: '0',
+      repeats: '1',
+    };
+
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('holidays');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('holidays', [baseHoliday]);
+      const rows = await store.load('holidays', { name: 'nonexistent' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — holidays filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('holidays', [
+        { name: 'New Year', start: '0', end: '86400', hol1: '1', hol2: '0', hol3: '0', repeats: '1' },
+      ]);
+      await expect(
+        store.load('holidays', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('holidays', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('holidays CRUD happy path', () => {
+    const holiday1 = {
+      name: 'New Year',
+      start: '0',
+      end: '86400',
+      hol1: '1',
+      hol2: '0',
+      hol3: '0',
+      repeats: '1',
+    };
+    const holiday2 = { ...holiday1, name: 'Labor Day', hol1: '0', hol2: '1' };
+
+    it('creates, loads, modifies, and destroys holidays', async () => {
+      // create
+      const created = await store.create('holidays', [holiday1, holiday2]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('holidays');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.name === 'New Year');
+      expect(first).toMatchObject(holiday1);
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('holidays', { name: 'Labor Day', hol2: '1' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('holidays', { repeats: '0' }, { name: 'Labor Day' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('holidays', { name: 'Labor Day' });
+      expect(afterModify[0]).toMatchObject({ repeats: '0' });
+
+      // destroy
+      const destroyed = await store.destroy('holidays', { name: 'New Year' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('holidays');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ name: 'Labor Day' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('holidays', [{ ...holiday1, nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

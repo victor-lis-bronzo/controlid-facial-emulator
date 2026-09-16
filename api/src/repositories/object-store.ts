@@ -49,6 +49,7 @@ import {
   areas,
   timeSpans,
   contingencyCards,
+  holidays,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -228,6 +229,19 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       id: { column: contingencyCards.id, schemaKey: 'id', numeric: true },
       value: { column: contingencyCards.value, schemaKey: 'value', numeric: false },
+    },
+  },
+  holidays: {
+    table: holidays,
+    columns: {
+      id: { column: holidays.id, schemaKey: 'id', numeric: true },
+      name: { column: holidays.name, schemaKey: 'name', numeric: false },
+      start: { column: holidays.start, schemaKey: 'start', numeric: false },
+      end: { column: holidays.end, schemaKey: 'end', numeric: false },
+      hol1: { column: holidays.hol1, schemaKey: 'hol1', numeric: false },
+      hol2: { column: holidays.hol2, schemaKey: 'hol2', numeric: false },
+      hol3: { column: holidays.hol3, schemaKey: 'hol3', numeric: false },
+      repeats: { column: holidays.repeats, schemaKey: 'repeats', numeric: false },
     },
   },
 };
