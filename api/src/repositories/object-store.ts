@@ -33,7 +33,7 @@ import { and, eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import type { DrizzleDb } from '../db/connection.js';
-import { users, accessLogs, changeLogs, templates, cards, qrcodes, uhfTags } from '../db/schema.js';
+import { users, accessLogs, changeLogs, templates, cards, qrcodes, uhfTags, pins } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
 /**
@@ -137,6 +137,14 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       id: { column: uhfTags.id, schemaKey: 'id', numeric: true },
       value: { column: uhfTags.value, schemaKey: 'value', numeric: false },
       user_id: { column: uhfTags.userId, schemaKey: 'userId', numeric: false },
+    },
+  },
+  pins: {
+    table: pins,
+    columns: {
+      id: { column: pins.id, schemaKey: 'id', numeric: true },
+      value: { column: pins.value, schemaKey: 'value', numeric: false },
+      user_id: { column: pins.userId, schemaKey: 'userId', numeric: false },
     },
   },
 };

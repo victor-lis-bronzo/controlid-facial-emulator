@@ -511,6 +511,76 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — pins empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('pins');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('pins', [{ value: '1234', user_id: '1' }]);
+      const rows = await store.load('pins', { user_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — pins filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('pins', [{ value: '1234', user_id: '1' }]);
+      await expect(
+        store.load('pins', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('pins', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('pins CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys pins', async () => {
+      // create
+      const created = await store.create('pins', [
+        { value: '1111', user_id: '1' },
+        { value: '2222', user_id: '2' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('pins');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.user_id === '1');
+      expect(first).toMatchObject({ value: '1111', user_id: '1' });
+      // id is returned as a string (device wire shape)
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('pins', { user_id: '2', value: '2222' });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]).toMatchObject({ user_id: '2' });
+
+      // modify
+      const modified = await store.modify('pins', { value: '3333' }, { user_id: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('pins', { user_id: '2' });
+      expect(afterModify[0]).toMatchObject({ value: '3333' });
+
+      // destroy
+      const destroyed = await store.destroy('pins', { user_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('pins');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ user_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('pins', [{ value: '1', user_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {
