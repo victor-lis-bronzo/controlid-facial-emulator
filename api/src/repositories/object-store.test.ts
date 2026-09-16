@@ -127,6 +127,94 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — change_logs empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('change_logs');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('change_logs', [
+        { operation_type: 'insert', table_name: 'users', table_id: '1', timestamp: '1000' },
+      ]);
+      const rows = await store.load('change_logs', { table_name: 'nonexistent' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — change_logs filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('change_logs', [
+        { operation_type: 'insert', table_name: 'users', table_id: '1', timestamp: '1000' },
+      ]);
+      await expect(
+        store.load('change_logs', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('change_logs', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('change_logs CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys change_logs', async () => {
+      // create
+      const created = await store.create('change_logs', [
+        { operation_type: 'insert', table_name: 'users', table_id: '1', timestamp: '1000' },
+        { operation_type: 'update', table_name: 'cards', table_id: '2', timestamp: '2000' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('change_logs');
+      expect(all).toHaveLength(2);
+      const insert = all.find((r) => r.operation_type === 'insert');
+      expect(insert).toMatchObject({
+        operation_type: 'insert',
+        table_name: 'users',
+        table_id: '1',
+        timestamp: '1000',
+      });
+      // id is returned as a string (device wire shape)
+      expect(typeof insert?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('change_logs', {
+        table_name: 'users',
+        operation_type: 'insert',
+      });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]).toMatchObject({ table_name: 'users' });
+
+      // modify
+      const modified = await store.modify(
+        'change_logs',
+        { operation_type: 'delete' },
+        { table_name: 'users' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('change_logs', { table_name: 'users' });
+      expect(afterModify[0]).toMatchObject({ operation_type: 'delete' });
+
+      // destroy
+      const destroyed = await store.destroy('change_logs', { table_name: 'cards' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('change_logs');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ table_name: 'users' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('change_logs', [
+          { operation_type: 'insert', table_name: 'users', table_id: '1', timestamp: '1000', nope: 'x' },
+        ]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

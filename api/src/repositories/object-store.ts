@@ -33,7 +33,7 @@ import { and, eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import type { DrizzleDb } from '../db/connection.js';
-import { users, accessLogs } from '../db/schema.js';
+import { users, accessLogs, changeLogs } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
 /**
@@ -93,6 +93,16 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       },
       card_value: { column: accessLogs.cardValue, schemaKey: 'cardValue', numeric: false },
       log_type_id: { column: accessLogs.logTypeId, schemaKey: 'logTypeId', numeric: false },
+    },
+  },
+  change_logs: {
+    table: changeLogs,
+    columns: {
+      id: { column: changeLogs.id, schemaKey: 'id', numeric: true },
+      operation_type: { column: changeLogs.operationType, schemaKey: 'operationType', numeric: false },
+      table_name: { column: changeLogs.tableName, schemaKey: 'tableName', numeric: false },
+      table_id: { column: changeLogs.tableId, schemaKey: 'tableId', numeric: false },
+      timestamp: { column: changeLogs.timestamp, schemaKey: 'timestamp', numeric: false },
     },
   },
 };

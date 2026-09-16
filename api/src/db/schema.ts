@@ -41,6 +41,14 @@ export const accessLogs = sqliteTable('access_logs', {
   logTypeId: text('log_type_id').notNull().default('-1'),
 });
 
+export const changeLogs = sqliteTable('change_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  operationType: text('operation_type').notNull(),
+  tableName: text('table_name').notNull(),
+  tableId: text('table_id').notNull(),
+  timestamp: text('timestamp').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

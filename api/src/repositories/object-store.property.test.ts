@@ -115,3 +115,85 @@ describe('ObjectStore.load — Property 10: filtered queries return the exact ma
     );
   });
 });
+
+/** The wire columns of `change_logs` that we generate/filter on. */
+const CHANGE_LOG_FILTERABLE_FIELDS = [
+  'operation_type',
+  'table_name',
+  'table_id',
+  'timestamp',
+] as const;
+
+type ChangeLogFilterableField = (typeof CHANGE_LOG_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single change_logs record (wire shape, all strings). */
+const changeLogRecordArb: fc.Arbitrary<Record<ChangeLogFilterableField, string>> = fc.record({
+  operation_type: smallValue,
+  table_name: smallValue,
+  table_id: smallValue,
+  timestamp: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (change_logs variant): for any set of change_logs records and any subset of valid filter parameters drawn from an existing record's own field values, load('change_logs', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (change_logs): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(changeLogRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...CHANGE_LOG_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('change_logs', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('change_logs', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              CHANGE_LOG_FILTERABLE_FIELDS.map((f) => String(r[f])).join('');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
