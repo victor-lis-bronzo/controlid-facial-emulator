@@ -44,6 +44,7 @@ import {
   pins,
   alarmZones,
   userRoles,
+  scheduledUnlocks,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -172,6 +173,14 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       user_id: { column: userRoles.userId, schemaKey: 'userId', numeric: true },
       role: { column: userRoles.role, schemaKey: 'role', numeric: false },
+    },
+  },
+  scheduled_unlocks: {
+    table: scheduledUnlocks,
+    columns: {
+      id: { column: scheduledUnlocks.id, schemaKey: 'id', numeric: true },
+      name: { column: scheduledUnlocks.name, schemaKey: 'name', numeric: false },
+      message: { column: scheduledUnlocks.message, schemaKey: 'message', numeric: false },
     },
   },
 };

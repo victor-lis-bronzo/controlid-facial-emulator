@@ -126,6 +126,11 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     user_id INTEGER PRIMARY KEY,
     role TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS scheduled_unlocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    message TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

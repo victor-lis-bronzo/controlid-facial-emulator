@@ -719,6 +719,80 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — scheduled_unlocks empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('scheduled_unlocks');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('scheduled_unlocks', [{ name: 'Lunch break' }]);
+      const rows = await store.load('scheduled_unlocks', { name: 'nonexistent' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — scheduled_unlocks filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('scheduled_unlocks', [{ name: 'Lunch break' }]);
+      await expect(
+        store.load('scheduled_unlocks', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('scheduled_unlocks', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('scheduled_unlocks CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys scheduled_unlocks', async () => {
+      // create
+      const created = await store.create('scheduled_unlocks', [
+        { name: 'Lunch break', message: 'Door open for lunch' },
+        { name: 'Holiday' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('scheduled_unlocks');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.name === 'Lunch break');
+      expect(first).toMatchObject({ name: 'Lunch break', message: 'Door open for lunch' });
+      expect(typeof first?.id).toBe('string');
+      const second = all.find((r) => r.name === 'Holiday');
+      expect(second?.message ?? null).toBeNull();
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('scheduled_unlocks', { name: 'Holiday' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify(
+        'scheduled_unlocks',
+        { message: 'Now with a message' },
+        { name: 'Holiday' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('scheduled_unlocks', { name: 'Holiday' });
+      expect(afterModify[0]).toMatchObject({ message: 'Now with a message' });
+
+      // destroy
+      const destroyed = await store.destroy('scheduled_unlocks', { name: 'Lunch break' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('scheduled_unlocks');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ name: 'Holiday' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('scheduled_unlocks', [{ name: 'x', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

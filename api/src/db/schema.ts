@@ -97,6 +97,12 @@ export const userRoles = sqliteTable('user_roles', {
   role: text('role').notNull(),
 });
 
+export const scheduledUnlocks = sqliteTable('scheduled_unlocks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  message: text('message'),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms
