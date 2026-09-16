@@ -175,6 +175,11 @@ export const catraInfos = sqliteTable('catra_infos', {
   exitTurns: text('exit_turns'),
 });
 
+export const logTypes = sqliteTable('log_types', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

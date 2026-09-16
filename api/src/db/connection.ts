@@ -193,6 +193,10 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     entrance_turns TEXT,
     exit_turns TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS log_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

@@ -1444,3 +1444,77 @@ describe('ObjectStore.load — Property 10 (catra_infos): filtered queries retur
     );
   });
 });
+
+/** The wire columns of `log_types` that we generate/filter on. */
+const LOG_TYPE_FILTERABLE_FIELDS = ['name'] as const;
+
+type LogTypeFilterableField = (typeof LOG_TYPE_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single log_types record (wire shape, all strings). */
+const logTypeRecordArb: fc.Arbitrary<Record<LogTypeFilterableField, string>> = fc.record({
+  name: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (log_types variant): for any set of log_types records and any subset of valid filter parameters drawn from an existing record's own field values, load('log_types', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (log_types): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(logTypeRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...LOG_TYPE_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('log_types', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('log_types', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              LOG_TYPE_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

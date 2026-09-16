@@ -53,6 +53,7 @@ import {
   alarmLogs,
   devices,
   catraInfos,
+  logTypes,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -275,6 +276,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       right_turns: { column: catraInfos.rightTurns, schemaKey: 'rightTurns', numeric: false },
       entrance_turns: { column: catraInfos.entranceTurns, schemaKey: 'entranceTurns', numeric: false },
       exit_turns: { column: catraInfos.exitTurns, schemaKey: 'exitTurns', numeric: false },
+    },
+  },
+  log_types: {
+    table: logTypes,
+    columns: {
+      id: { column: logTypes.id, schemaKey: 'id', numeric: true },
+      name: { column: logTypes.name, schemaKey: 'name', numeric: false },
     },
   },
 };
