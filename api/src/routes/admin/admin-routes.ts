@@ -20,10 +20,12 @@
  *   - Status codes: `201` create, `200` read/update/delete; `400/401/404/409/413`
  *     surface from the services / multipart plugin via the global error handler.
  *
- * `@fastify/multipart` is registered here (scoped) with a 5 MB single-file limit
- * so the oversize case yields `413` (Req 3.3); `throwFileSizeLimit` makes
- * `toBuffer()` raise `FST_REQ_FILE_TOO_LARGE` (a 413 `FastifyError`) rather than
- * silently truncating.
+ * `@fastify/multipart` is registered once, globally, in `app.ts` (5 MB
+ * single-file limit; `throwFileSizeLimit` makes `toBuffer()` raise
+ * `FST_REQ_FILE_TOO_LARGE`, a 413 `FastifyError`, rather than silently
+ * truncating — Req 3.3). Do NOT register it again here: `@fastify/multipart`
+ * decorates the root Fastify instance regardless of encapsulation, so a
+ * second registration throws `FST_ERR_DEC_ALREADY_PRESENT` at boot (#35).
  */
 import type {
   FastifyInstance,
@@ -38,7 +40,6 @@ import { BadRequestError, HttpError } from '../errors.js';
 import {
   ACCEPTED_FORMATS_MESSAGE,
   ACCEPTED_MIMES,
-  MAX_PHOTO_BYTES,
   isFileTooLargeError,
   sniffImageMime,
 } from '../photo-validation.js';
