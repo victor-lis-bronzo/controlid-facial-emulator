@@ -151,6 +151,16 @@ export const holidays = sqliteTable('holidays', {
   repeats: text('repeats').notNull(),
 });
 
+export const alarmLogs = sqliteTable('alarm_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  event: text('event').notNull(), // 1 Alarm On, 2 Alarm Off
+  cause: text('cause').notNull(),
+  userId: text('user_id'),
+  time: text('time').notNull(),
+  accessLogId: text('access_log_id'),
+  doorId: text('door_id'),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

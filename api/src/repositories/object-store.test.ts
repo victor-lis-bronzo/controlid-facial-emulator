@@ -1202,6 +1202,76 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — alarm_logs empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('alarm_logs');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('alarm_logs', [{ event: '1', cause: '3', time: '1000' }]);
+      const rows = await store.load('alarm_logs', { cause: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — alarm_logs filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('alarm_logs', [{ event: '1', cause: '3', time: '1000' }]);
+      await expect(
+        store.load('alarm_logs', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('alarm_logs', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('alarm_logs CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys alarm_logs', async () => {
+      // create
+      const created = await store.create('alarm_logs', [
+        { event: '1', cause: '3', user_id: '5', time: '1000', access_log_id: '10', door_id: '1' },
+        { event: '2', cause: '7', time: '2000' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('alarm_logs');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.event === '1');
+      expect(first).toMatchObject({ event: '1', cause: '3', user_id: '5', time: '1000' });
+      expect(typeof first?.id).toBe('string');
+      const second = all.find((r) => r.event === '2');
+      expect(second?.user_id ?? null).toBeNull();
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('alarm_logs', { event: '2', cause: '7' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('alarm_logs', { cause: '9' }, { event: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('alarm_logs', { event: '2' });
+      expect(afterModify[0]).toMatchObject({ cause: '9' });
+
+      // destroy
+      const destroyed = await store.destroy('alarm_logs', { event: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('alarm_logs');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ event: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('alarm_logs', [{ event: '1', cause: '3', time: '1000', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

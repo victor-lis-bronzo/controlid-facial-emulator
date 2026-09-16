@@ -50,6 +50,7 @@ import {
   timeSpans,
   contingencyCards,
   holidays,
+  alarmLogs,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -242,6 +243,18 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       hol2: { column: holidays.hol2, schemaKey: 'hol2', numeric: false },
       hol3: { column: holidays.hol3, schemaKey: 'hol3', numeric: false },
       repeats: { column: holidays.repeats, schemaKey: 'repeats', numeric: false },
+    },
+  },
+  alarm_logs: {
+    table: alarmLogs,
+    columns: {
+      id: { column: alarmLogs.id, schemaKey: 'id', numeric: true },
+      event: { column: alarmLogs.event, schemaKey: 'event', numeric: false },
+      cause: { column: alarmLogs.cause, schemaKey: 'cause', numeric: false },
+      user_id: { column: alarmLogs.userId, schemaKey: 'userId', numeric: false },
+      time: { column: alarmLogs.time, schemaKey: 'time', numeric: false },
+      access_log_id: { column: alarmLogs.accessLogId, schemaKey: 'accessLogId', numeric: false },
+      door_id: { column: alarmLogs.doorId, schemaKey: 'doorId', numeric: false },
     },
   },
 };

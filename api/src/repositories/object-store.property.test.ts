@@ -1213,3 +1213,82 @@ describe('ObjectStore.load — Property 10 (holidays): filtered queries return t
     );
   });
 });
+
+/** The wire columns of `alarm_logs` that we generate/filter on. */
+const ALARM_LOG_FILTERABLE_FIELDS = ['event', 'cause', 'user_id', 'time', 'access_log_id', 'door_id'] as const;
+
+type AlarmLogFilterableField = (typeof ALARM_LOG_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single alarm_logs record (wire shape, all strings). */
+const alarmLogRecordArb: fc.Arbitrary<Record<AlarmLogFilterableField, string>> = fc.record({
+  event: smallValue,
+  cause: smallValue,
+  user_id: smallValue,
+  time: smallValue,
+  access_log_id: smallValue,
+  door_id: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (alarm_logs variant): for any set of alarm_logs records and any subset of valid filter parameters drawn from an existing record's own field values, load('alarm_logs', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (alarm_logs): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(alarmLogRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...ALARM_LOG_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('alarm_logs', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('alarm_logs', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              ALARM_LOG_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

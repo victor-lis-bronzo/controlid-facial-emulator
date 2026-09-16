@@ -172,6 +172,15 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     hol3 TEXT NOT NULL,
     repeats TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS alarm_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,
+    cause TEXT NOT NULL,
+    user_id TEXT,
+    time TEXT NOT NULL,
+    access_log_id TEXT,
+    door_id TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,
