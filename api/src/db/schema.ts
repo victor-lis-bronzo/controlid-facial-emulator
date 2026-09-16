@@ -69,6 +69,12 @@ export const qrcodes = sqliteTable('qrcodes', {
   userId: text('user_id').notNull(),
 });
 
+export const uhfTags = sqliteTable('uhf_tags', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  value: text('value').notNull(),
+  userId: text('user_id').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

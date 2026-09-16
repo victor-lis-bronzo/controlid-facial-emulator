@@ -106,6 +106,11 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     value TEXT NOT NULL,
     user_id TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS uhf_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    value TEXT NOT NULL,
+    user_id TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,
