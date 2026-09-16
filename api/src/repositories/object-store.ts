@@ -55,6 +55,7 @@ import {
   catraInfos,
   logTypes,
   secBoxs,
+  contacts,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -305,6 +306,14 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
         schemaKey: 'autoCloseEnabled',
         numeric: false,
       },
+    },
+  },
+  contacts: {
+    table: contacts,
+    columns: {
+      id: { column: contacts.id, schemaKey: 'id', numeric: true },
+      name: { column: contacts.name, schemaKey: 'name', numeric: false },
+      number: { column: contacts.number, schemaKey: 'number', numeric: false },
     },
   },
 };

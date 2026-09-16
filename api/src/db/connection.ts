@@ -207,6 +207,11 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     door_sensor_idle TEXT,
     auto_close_enabled TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    number TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

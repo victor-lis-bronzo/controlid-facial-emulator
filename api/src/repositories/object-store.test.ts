@@ -1538,6 +1538,76 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — contacts empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('contacts');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('contacts', [{ name: 'Security', number: '911' }]);
+      const rows = await store.load('contacts', { name: 'nonexistent' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — contacts filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('contacts', [{ name: 'Security', number: '911' }]);
+      await expect(
+        store.load('contacts', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('contacts', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('contacts CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys contacts', async () => {
+      // create
+      const created = await store.create('contacts', [
+        { name: 'Security', number: '911' },
+        { name: 'Reception' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('contacts');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.name === 'Security');
+      expect(first).toMatchObject({ name: 'Security', number: '911' });
+      expect(typeof first?.id).toBe('string');
+      const second = all.find((r) => r.name === 'Reception');
+      expect(second?.number ?? null).toBeNull();
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('contacts', { name: 'Reception' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('contacts', { number: '100' }, { name: 'Reception' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('contacts', { name: 'Reception' });
+      expect(afterModify[0]).toMatchObject({ number: '100' });
+
+      // destroy
+      const destroyed = await store.destroy('contacts', { name: 'Security' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('contacts');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ name: 'Reception' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('contacts', [{ name: 'x', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

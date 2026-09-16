@@ -194,6 +194,12 @@ export const secBoxs = sqliteTable('sec_boxs', {
   autoCloseEnabled: text('auto_close_enabled'),
 });
 
+export const contacts = sqliteTable('contacts', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name'),
+  number: text('number'),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms
