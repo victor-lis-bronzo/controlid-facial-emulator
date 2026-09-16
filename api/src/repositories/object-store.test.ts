@@ -653,6 +653,72 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — user_roles empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('user_roles');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('user_roles', [{ user_id: '1', role: '1' }]);
+      const rows = await store.load('user_roles', { user_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — user_roles filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('user_roles', [{ user_id: '1', role: '1' }]);
+      await expect(
+        store.load('user_roles', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('user_roles', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('user_roles CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys user_roles', async () => {
+      // create — `user_id` is the device-assigned identifier, not store-generated
+      const created = await store.create('user_roles', [
+        { user_id: '1', role: '1' },
+        { user_id: '2', role: '0' },
+      ]);
+      expect(created.ids).toEqual([1, 2]);
+
+      // load all
+      const all = await store.load('user_roles');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.user_id === '1');
+      expect(first).toMatchObject({ user_id: '1', role: '1' });
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('user_roles', { user_id: '2', role: '0' });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]).toMatchObject({ user_id: '2' });
+
+      // modify
+      const modified = await store.modify('user_roles', { role: '1' }, { user_id: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('user_roles', { user_id: '2' });
+      expect(afterModify[0]).toMatchObject({ role: '1' });
+
+      // destroy
+      const destroyed = await store.destroy('user_roles', { user_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('user_roles');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ user_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('user_roles', [{ user_id: '1', role: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

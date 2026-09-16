@@ -90,6 +90,13 @@ export const alarmZones = sqliteTable('alarm_zones', {
   alarmDelay: text('alarm_delay').notNull(),
 });
 
+// `user_id` (not `id`) is the device-assigned primary key for this object,
+// per docs/route-gaps-field-reference.md — one role row per user.
+export const userRoles = sqliteTable('user_roles', {
+  userId: integer('user_id').primaryKey(),
+  role: text('role').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

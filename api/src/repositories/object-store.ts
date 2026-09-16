@@ -43,6 +43,7 @@ import {
   uhfTags,
   pins,
   alarmZones,
+  userRoles,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -164,6 +165,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       enabled: { column: alarmZones.enabled, schemaKey: 'enabled', numeric: false },
       active_level: { column: alarmZones.activeLevel, schemaKey: 'activeLevel', numeric: false },
       alarm_delay: { column: alarmZones.alarmDelay, schemaKey: 'alarmDelay', numeric: false },
+    },
+  },
+  user_roles: {
+    table: userRoles,
+    columns: {
+      user_id: { column: userRoles.userId, schemaKey: 'userId', numeric: true },
+      role: { column: userRoles.role, schemaKey: 'role', numeric: false },
     },
   },
 };

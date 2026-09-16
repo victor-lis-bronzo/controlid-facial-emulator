@@ -122,6 +122,10 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     active_level TEXT NOT NULL,
     alarm_delay TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS user_roles (
+    user_id INTEGER PRIMARY KEY,
+    role TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

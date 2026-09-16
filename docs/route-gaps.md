@@ -11,7 +11,7 @@ below is either implemented or a Route Gap — never a permanent "out of
 scope". See [CONTEXT.md](../CONTEXT.md) for the Documented Divergence /
 Route Gap distinction.
 
-## Implemented (13)
+## Implemented (14)
 
 | Object | Table | Repository |
 | --- | --- | --- |
@@ -28,10 +28,11 @@ Route Gap distinction.
 | `uhf_tags` | `uhfTags` | `api/src/repositories/object-store.ts` |
 | `pins` | `pins` | `api/src/repositories/object-store.ts` |
 | `alarm_zones` | `alarmZones` | `api/src/repositories/object-store.ts` |
+| `user_roles` | `userRoles` | `api/src/repositories/object-store.ts` |
 
-## Route Gaps (27)
+## Route Gaps (26)
 
-`user_roles`, `user_groups`, `scheduled_unlocks`, `actions`,
+`user_groups`, `scheduled_unlocks`, `actions`,
 `areas`, `portal_actions`, `portal_access_rules`, `group_access_rules`,
 `time_spans`, `contingency_cards`, `contingency_card_access_rules`,
 `holidays`, `alarm_zone_time_zones`, `access_rule_time_zones`,
@@ -43,8 +44,8 @@ Route Gap distinction.
 Each of these needs a dedicated Drizzle schema + `OBJECT_REGISTRY` entry per
 [spec #41](https://github.com/victor-lis-bronzo/controlid-facial-emulator/issues/41)
 (Padrão A, replicating `users`/`access_logs`/`change_logs`/`templates`/`cards`/
-`qrcodes`/`uhf_tags`/`pins`/`alarm_zones`), tracked as individual tickets on
-GitHub Issues (#50–#76).
+`qrcodes`/`uhf_tags`/`pins`/`alarm_zones`/`user_roles`), tracked as individual
+tickets on GitHub Issues (#51–#76).
 
 ## Action endpoints (not object CRUD)
 
