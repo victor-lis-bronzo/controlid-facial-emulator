@@ -11,7 +11,7 @@ below is either implemented or a Route Gap — never a permanent "out of
 scope". See [CONTEXT.md](../CONTEXT.md) for the Documented Divergence /
 Route Gap distinction.
 
-## Implemented (9)
+## Implemented (10)
 
 | Object | Table | Repository |
 | --- | --- | --- |
@@ -24,10 +24,11 @@ Route Gap distinction.
 | `change_logs` | `changeLogs` | `api/src/repositories/object-store.ts` |
 | `templates` | `templates` | `api/src/repositories/object-store.ts` |
 | `cards` | `cards` | `api/src/repositories/object-store.ts` |
+| `qrcodes` | `qrcodes` | `api/src/repositories/object-store.ts` |
 
-## Route Gaps (31)
+## Route Gaps (30)
 
-`qrcodes`, `uhf_tags`, `pins`,
+`uhf_tags`, `pins`,
 `alarm_zones`, `user_roles`, `user_groups`, `scheduled_unlocks`, `actions`,
 `areas`, `portal_actions`, `portal_access_rules`, `group_access_rules`,
 `time_spans`, `contingency_cards`, `contingency_card_access_rules`,
@@ -39,8 +40,8 @@ Route Gap distinction.
 
 Each of these needs a dedicated Drizzle schema + `OBJECT_REGISTRY` entry per
 [spec #41](https://github.com/victor-lis-bronzo/controlid-facial-emulator/issues/41)
-(Padrão A, replicating `users`/`access_logs`/`change_logs`/`templates`/`cards`),
-tracked as individual tickets on GitHub Issues (#46–#76).
+(Padrão A, replicating `users`/`access_logs`/`change_logs`/`templates`/`cards`/
+`qrcodes`), tracked as individual tickets on GitHub Issues (#47–#76).
 
 ## Action endpoints (not object CRUD)
 

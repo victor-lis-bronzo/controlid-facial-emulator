@@ -371,6 +371,76 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — qrcodes empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('qrcodes');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('qrcodes', [{ value: 'qr-abc', user_id: '1' }]);
+      const rows = await store.load('qrcodes', { user_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — qrcodes filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('qrcodes', [{ value: 'qr-abc', user_id: '1' }]);
+      await expect(
+        store.load('qrcodes', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('qrcodes', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('qrcodes CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys qrcodes', async () => {
+      // create
+      const created = await store.create('qrcodes', [
+        { value: 'qr-one', user_id: '1' },
+        { value: 'qr-two', user_id: '2' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('qrcodes');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.user_id === '1');
+      expect(first).toMatchObject({ value: 'qr-one', user_id: '1' });
+      // id is returned as a string (device wire shape)
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('qrcodes', { user_id: '2', value: 'qr-two' });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]).toMatchObject({ user_id: '2' });
+
+      // modify
+      const modified = await store.modify('qrcodes', { value: 'qr-changed' }, { user_id: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('qrcodes', { user_id: '2' });
+      expect(afterModify[0]).toMatchObject({ value: 'qr-changed' });
+
+      // destroy
+      const destroyed = await store.destroy('qrcodes', { user_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('qrcodes');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ user_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('qrcodes', [{ value: '1', user_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

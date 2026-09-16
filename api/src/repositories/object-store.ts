@@ -33,7 +33,7 @@ import { and, eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import type { DrizzleDb } from '../db/connection.js';
-import { users, accessLogs, changeLogs, templates, cards } from '../db/schema.js';
+import { users, accessLogs, changeLogs, templates, cards, qrcodes } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
 /**
@@ -121,6 +121,14 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       id: { column: cards.id, schemaKey: 'id', numeric: true },
       value: { column: cards.value, schemaKey: 'value', numeric: false },
       user_id: { column: cards.userId, schemaKey: 'userId', numeric: false },
+    },
+  },
+  qrcodes: {
+    table: qrcodes,
+    columns: {
+      id: { column: qrcodes.id, schemaKey: 'id', numeric: true },
+      value: { column: qrcodes.value, schemaKey: 'value', numeric: false },
+      user_id: { column: qrcodes.userId, schemaKey: 'userId', numeric: false },
     },
   },
 };
