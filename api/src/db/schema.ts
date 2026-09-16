@@ -81,6 +81,15 @@ export const pins = sqliteTable('pins', {
   userId: text('user_id').notNull(),
 });
 
+// `zone` (not `id`) is the device-assigned primary key for this object, per
+// docs/route-gaps-field-reference.md.
+export const alarmZones = sqliteTable('alarm_zones', {
+  zone: integer('zone').primaryKey(),
+  enabled: text('enabled').notNull(),
+  activeLevel: text('active_level').notNull(),
+  alarmDelay: text('alarm_delay').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

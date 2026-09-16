@@ -581,6 +581,78 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — alarm_zones empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('alarm_zones');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('alarm_zones', [
+        { zone: '1', enabled: '1', active_level: '1', alarm_delay: '0' },
+      ]);
+      const rows = await store.load('alarm_zones', { zone: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — alarm_zones filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('alarm_zones', [
+        { zone: '1', enabled: '1', active_level: '1', alarm_delay: '0' },
+      ]);
+      await expect(
+        store.load('alarm_zones', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('alarm_zones', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('alarm_zones CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys alarm_zones', async () => {
+      // create — `zone` is the device-assigned identifier, not store-generated
+      const created = await store.create('alarm_zones', [
+        { zone: '1', enabled: '1', active_level: '1', alarm_delay: '0' },
+        { zone: '2', enabled: '0', active_level: '0', alarm_delay: '5' },
+      ]);
+      expect(created.ids).toEqual([1, 2]);
+
+      // load all
+      const all = await store.load('alarm_zones');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.zone === '1');
+      expect(first).toMatchObject({ zone: '1', enabled: '1', active_level: '1', alarm_delay: '0' });
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('alarm_zones', { zone: '2', enabled: '0' });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]).toMatchObject({ zone: '2' });
+
+      // modify
+      const modified = await store.modify('alarm_zones', { enabled: '1' }, { zone: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('alarm_zones', { zone: '2' });
+      expect(afterModify[0]).toMatchObject({ enabled: '1' });
+
+      // destroy
+      const destroyed = await store.destroy('alarm_zones', { zone: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('alarm_zones');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ zone: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('alarm_zones', [
+          { zone: '1', enabled: '1', active_level: '1', alarm_delay: '0', nope: 'x' },
+        ]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

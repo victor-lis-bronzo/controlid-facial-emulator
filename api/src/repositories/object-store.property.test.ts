@@ -579,3 +579,81 @@ describe('ObjectStore.load — Property 10 (pins): filtered queries return the e
     );
   });
 });
+
+/** The wire columns of `alarm_zones` that we generate/filter on (excluding `zone`, the PK). */
+const ALARM_ZONE_FILTERABLE_FIELDS = ['enabled', 'active_level', 'alarm_delay'] as const;
+
+type AlarmZoneFilterableField = (typeof ALARM_ZONE_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single alarm_zones record (wire shape, all strings; `zone` assigned by the test). */
+const alarmZoneRecordArb: fc.Arbitrary<Record<AlarmZoneFilterableField, string>> = fc.record({
+  enabled: smallValue,
+  active_level: smallValue,
+  alarm_delay: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (alarm_zones variant): for any set of alarm_zones records and any subset of valid filter parameters drawn from an existing record's own field values, load('alarm_zones', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (alarm_zones): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(alarmZoneRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...ALARM_ZONE_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (bareRecords, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            // Assign each record a distinct `zone` (the device-assigned PK).
+            const records = bareRecords.map((rec, i) => ({ ...rec, zone: String(i + 1) }));
+            await store.create('alarm_zones', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('alarm_zones', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              [...ALARM_ZONE_FILTERABLE_FIELDS, 'zone'].map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

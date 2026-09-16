@@ -33,7 +33,17 @@ import { and, eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import type { DrizzleDb } from '../db/connection.js';
-import { users, accessLogs, changeLogs, templates, cards, qrcodes, uhfTags, pins } from '../db/schema.js';
+import {
+  users,
+  accessLogs,
+  changeLogs,
+  templates,
+  cards,
+  qrcodes,
+  uhfTags,
+  pins,
+  alarmZones,
+} from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
 /**
@@ -145,6 +155,15 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       id: { column: pins.id, schemaKey: 'id', numeric: true },
       value: { column: pins.value, schemaKey: 'value', numeric: false },
       user_id: { column: pins.userId, schemaKey: 'userId', numeric: false },
+    },
+  },
+  alarm_zones: {
+    table: alarmZones,
+    columns: {
+      zone: { column: alarmZones.zone, schemaKey: 'zone', numeric: true },
+      enabled: { column: alarmZones.enabled, schemaKey: 'enabled', numeric: false },
+      active_level: { column: alarmZones.activeLevel, schemaKey: 'activeLevel', numeric: false },
+      alarm_delay: { column: alarmZones.alarmDelay, schemaKey: 'alarmDelay', numeric: false },
     },
   },
 };
