@@ -57,6 +57,12 @@ export const templates = sqliteTable('templates', {
   userId: text('user_id').notNull(),
 });
 
+export const cards = sqliteTable('cards', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  value: text('value').notNull(),
+  userId: text('user_id').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

@@ -279,3 +279,78 @@ describe('ObjectStore.load — Property 10 (templates): filtered queries return 
     );
   });
 });
+
+/** The wire columns of `cards` that we generate/filter on. */
+const CARD_FILTERABLE_FIELDS = ['value', 'user_id'] as const;
+
+type CardFilterableField = (typeof CARD_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single cards record (wire shape, all strings). */
+const cardRecordArb: fc.Arbitrary<Record<CardFilterableField, string>> = fc.record({
+  value: smallValue,
+  user_id: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (cards variant): for any set of cards records and any subset of valid filter parameters drawn from an existing record's own field values, load('cards', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (cards): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(cardRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...CARD_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('cards', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('cards', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              CARD_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
