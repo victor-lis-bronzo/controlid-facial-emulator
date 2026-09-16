@@ -197,6 +197,16 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS sec_boxs (
+    id INTEGER PRIMARY KEY,
+    version TEXT,
+    name TEXT,
+    enabled TEXT,
+    relay_timeout TEXT,
+    door_sensor_enabled TEXT,
+    door_sensor_idle TEXT,
+    auto_close_enabled TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

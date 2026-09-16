@@ -54,6 +54,7 @@ import {
   devices,
   catraInfos,
   logTypes,
+  secBoxs,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -283,6 +284,27 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       id: { column: logTypes.id, schemaKey: 'id', numeric: true },
       name: { column: logTypes.name, schemaKey: 'name', numeric: false },
+    },
+  },
+  sec_boxs: {
+    table: secBoxs,
+    columns: {
+      id: { column: secBoxs.id, schemaKey: 'id', numeric: true },
+      version: { column: secBoxs.version, schemaKey: 'version', numeric: false },
+      name: { column: secBoxs.name, schemaKey: 'name', numeric: false },
+      enabled: { column: secBoxs.enabled, schemaKey: 'enabled', numeric: false },
+      relay_timeout: { column: secBoxs.relayTimeout, schemaKey: 'relayTimeout', numeric: false },
+      door_sensor_enabled: {
+        column: secBoxs.doorSensorEnabled,
+        schemaKey: 'doorSensorEnabled',
+        numeric: false,
+      },
+      door_sensor_idle: { column: secBoxs.doorSensorIdle, schemaKey: 'doorSensorIdle', numeric: false },
+      auto_close_enabled: {
+        column: secBoxs.autoCloseEnabled,
+        schemaKey: 'autoCloseEnabled',
+        numeric: false,
+      },
     },
   },
 };

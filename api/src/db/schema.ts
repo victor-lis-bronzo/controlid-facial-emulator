@@ -180,6 +180,20 @@ export const logTypes = sqliteTable('log_types', {
   name: text('name').notNull(),
 });
 
+// Per docs/route-gaps-field-reference.md the official `id` is a fixed
+// hardware constant (65793), not sequentially assigned — modeled without
+// AUTOINCREMENT so a specific value can be provided on create.
+export const secBoxs = sqliteTable('sec_boxs', {
+  id: integer('id').primaryKey(),
+  version: text('version'),
+  name: text('name'),
+  enabled: text('enabled'),
+  relayTimeout: text('relay_timeout'),
+  doorSensorEnabled: text('door_sensor_enabled'),
+  doorSensorIdle: text('door_sensor_idle'),
+  autoCloseEnabled: text('auto_close_enabled'),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

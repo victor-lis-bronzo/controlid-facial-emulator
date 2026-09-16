@@ -1476,6 +1476,68 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — sec_boxs empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('sec_boxs');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('sec_boxs', [{ id: '65793', name: 'SecBox 1' }]);
+      const rows = await store.load('sec_boxs', { id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — sec_boxs filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('sec_boxs', [{ id: '65793', name: 'SecBox 1' }]);
+      await expect(
+        store.load('sec_boxs', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('sec_boxs', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('sec_boxs CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys sec_boxs', async () => {
+      // create — `id` is a device-assigned constant, not store-generated
+      const created = await store.create('sec_boxs', [
+        { id: '65793', version: '1', name: 'SecBox 1', enabled: '1' },
+      ]);
+      expect(created.ids).toEqual([65793]);
+
+      // load all
+      const all = await store.load('sec_boxs');
+      expect(all).toHaveLength(1);
+      expect(all[0]).toMatchObject({ id: '65793', name: 'SecBox 1', enabled: '1' });
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('sec_boxs', { id: '65793', enabled: '1' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('sec_boxs', { enabled: '0' }, { id: '65793' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('sec_boxs', { id: '65793' });
+      expect(afterModify[0]).toMatchObject({ enabled: '0' });
+
+      // destroy
+      const destroyed = await store.destroy('sec_boxs', { id: '65793' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('sec_boxs');
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('sec_boxs', [{ id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

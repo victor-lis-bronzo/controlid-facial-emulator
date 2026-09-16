@@ -1518,3 +1518,92 @@ describe('ObjectStore.load — Property 10 (log_types): filtered queries return 
     );
   });
 });
+
+/** The wire columns of `sec_boxs` that we generate/filter on (excluding `id`, the PK). */
+const SEC_BOX_FILTERABLE_FIELDS = [
+  'version',
+  'name',
+  'enabled',
+  'relay_timeout',
+  'door_sensor_enabled',
+  'door_sensor_idle',
+  'auto_close_enabled',
+] as const;
+
+type SecBoxFilterableField = (typeof SEC_BOX_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single sec_boxs record (wire shape, all strings; `id` assigned by the test). */
+const secBoxRecordArb: fc.Arbitrary<Record<SecBoxFilterableField, string>> = fc.record({
+  version: smallValue,
+  name: smallValue,
+  enabled: smallValue,
+  relay_timeout: smallValue,
+  door_sensor_enabled: smallValue,
+  door_sensor_idle: smallValue,
+  auto_close_enabled: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (sec_boxs variant): for any set of sec_boxs records and any subset of valid filter parameters drawn from an existing record's own field values, load('sec_boxs', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (sec_boxs): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(secBoxRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...SEC_BOX_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (bareRecords, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            const records = bareRecords.map((rec, i) => ({ ...rec, id: String(i + 1) }));
+            await store.create('sec_boxs', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('sec_boxs', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              [...SEC_BOX_FILTERABLE_FIELDS, 'id'].map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
