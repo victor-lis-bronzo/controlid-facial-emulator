@@ -135,6 +135,11 @@ export const timeSpans = sqliteTable('time_spans', {
   hol3: text('hol3').notNull(),
 });
 
+export const contingencyCards = sqliteTable('contingency_cards', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  value: text('value').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

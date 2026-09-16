@@ -1043,6 +1043,77 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — contingency_cards empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('contingency_cards');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('contingency_cards', [{ value: '123456' }]);
+      const rows = await store.load('contingency_cards', { value: '999999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — contingency_cards filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('contingency_cards', [{ value: '123456' }]);
+      await expect(
+        store.load('contingency_cards', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('contingency_cards', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('contingency_cards CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys contingency_cards', async () => {
+      // create
+      const created = await store.create('contingency_cards', [
+        { value: '111111' },
+        { value: '222222' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('contingency_cards');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.value === '111111');
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('contingency_cards', { value: '222222' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify(
+        'contingency_cards',
+        { value: '333333' },
+        { value: '222222' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('contingency_cards', { value: '333333' });
+      expect(afterModify).toHaveLength(1);
+
+      // destroy
+      const destroyed = await store.destroy('contingency_cards', { value: '111111' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('contingency_cards');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ value: '333333' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('contingency_cards', [{ value: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

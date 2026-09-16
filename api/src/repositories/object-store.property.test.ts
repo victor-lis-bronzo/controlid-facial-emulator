@@ -1059,3 +1059,77 @@ describe('ObjectStore.load — Property 10 (time_spans): filtered queries return
     );
   });
 });
+
+/** The wire columns of `contingency_cards` that we generate/filter on. */
+const CONTINGENCY_CARD_FILTERABLE_FIELDS = ['value'] as const;
+
+type ContingencyCardFilterableField = (typeof CONTINGENCY_CARD_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single contingency_cards record (wire shape, all strings). */
+const contingencyCardRecordArb: fc.Arbitrary<Record<ContingencyCardFilterableField, string>> = fc.record({
+  value: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (contingency_cards variant): for any set of contingency_cards records and any subset of valid filter parameters drawn from an existing record's own field values, load('contingency_cards', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (contingency_cards): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(contingencyCardRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...CONTINGENCY_CARD_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('contingency_cards', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('contingency_cards', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              CONTINGENCY_CARD_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

@@ -158,6 +158,10 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     hol2 TEXT NOT NULL,
     hol3 TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS contingency_cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    value TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,
