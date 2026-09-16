@@ -20,5 +20,8 @@
     "typecheck": "npm run typecheck -w api && npm run typecheck -w web",
     "dev": "npm run dev -w api",
     "dev:web": "npm run dev -w web"
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
   }
 }
