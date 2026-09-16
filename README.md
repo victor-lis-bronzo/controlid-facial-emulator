@@ -119,6 +119,8 @@ token (passed as `?session=<token>`); the token TTL is 3600 seconds.
 | `/modify_objects.fcgi`      | POST       | Yes  | Update objects matching a `where` clause                       |
 | `/destroy_objects.fcgi`     | POST       | Yes  | Delete objects matching a `where` clause                       |
 | `/user_get_image.fcgi`      | GET / POST | Yes  | Retrieve a user's stored face image (image bytes)              |
+| `/user_set_image.fcgi`      | POST       | Yes  | Upload a user's face image (multipart)                         |
+| `/user_destroy_image.fcgi`  | POST       | Yes  | Remove a user's stored face image                               |
 | `/new_user_identified.fcgi` | POST       | No   | Online-identification callback returning the reply message     |
 
 Validation follows the reference API: an invalid body (bad JSON, missing required field, or

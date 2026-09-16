@@ -38,3 +38,11 @@ _Avoid_: Root execution, su-exec entrypoints
 
 **Named Volumes Security**:
 Comportamento esperado onde os volumes nomeados (`emulator-data`) herdam a propriedade de pastas previamente criadas e chownadas no Dockerfile, garantindo persistência sem violar a política de Non-root.
+
+**Documented Divergence**:
+Comportamento de uma rota existente que é deliberadamente simplificado em relação à Access API oficial (ex.: sem matching biométrico real), sempre registrado na seção "Documented divergences" do README.
+_Avoid_: Limitation, Known issue
+
+**Route Gap**:
+Endpoint ou objeto documentado na Access API oficial que ainda não tem implementação no emulador — é item de backlog, não uma divergência permanente.
+_Avoid_: Out of scope, Missing feature

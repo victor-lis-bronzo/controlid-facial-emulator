@@ -30,12 +30,22 @@ The emulator operates in two modes defined by `EMULATOR_STATE_MODE`:
 - `README.md` (Lines 87-95)
 
 ### 2. Database Schema
-The database uses SQLite and models device internal state with five main tables:
+The database uses SQLite and models device internal state with nine main tables:
 - `config`: Stores configuration modules as JSON blobs.
 - `users`: Stores user identities (id, registration, name, password, imagePath).
 - `accessLogs`: Logs of biometric access events (event type, identifiers).
 - `sessions`: Token-based session management for `.fcgi` routes.
 - `interceptionLog`: Stores all inbound API requests and outbound webhook events.
+- `groups`: Named collections of users, used to compose access rules (admin panel).
+- `portals`: The doors / access points the device controls (admin panel).
+- `timeZones`: Named weekly schedules built from time ranges (admin panel).
+- `accessRules`: Compositions associating Groups, Time Zones, and Portals (admin panel).
+
+The official Access API documents ~40 object types in total (`cards`, `templates`,
+`areas`, `devices`, `holidays`, etc.); only the nine above are implemented today. The
+rest are tracked as Route Gaps against
+[ADR 0002](adr/0002-full-route-coverage-mocked-hardware.md), not as
+divergences — see [CONTEXT.md](../CONTEXT.md) for the distinction.
 
 **Sources:**
 - `api/src/db/schema.ts`
