@@ -89,6 +89,13 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     table_id TEXT NOT NULL,
     timestamp TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    finger_position TEXT,
+    finger_type TEXT NOT NULL,
+    template TEXT,
+    user_id TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

@@ -342,6 +342,65 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad.json()).toEqual({ change_logs: [] });
   });
+
+  it('templates: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'templates',
+        values: [{ finger_type: '0', template: 'YmFzZTY0', user_id: '1' }],
+      },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'templates' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { templates: Record<string, unknown>[] };
+    expect(loaded.templates.length).toBe(1);
+    expect(loaded.templates[0].user_id).toBe('1');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'templates',
+        values: { finger_type: '1' },
+        where: { user_id: '1' },
+      },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'templates', where: { user_id: '1' } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'templates' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad.json()).toEqual({ templates: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

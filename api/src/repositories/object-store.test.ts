@@ -215,6 +215,92 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — templates empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('templates');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('templates', [
+        { finger_type: '0', template: 'YmFzZTY0', user_id: '1' },
+      ]);
+      const rows = await store.load('templates', { user_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — templates filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('templates', [
+        { finger_type: '0', template: 'YmFzZTY0', user_id: '1' },
+      ]);
+      await expect(
+        store.load('templates', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('templates', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('templates CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys templates', async () => {
+      // create
+      const created = await store.create('templates', [
+        { finger_type: '0', template: 'YmFzZTY0LW9uZQ==', user_id: '1' },
+        { finger_type: '1', finger_position: '2', template: 'YmFzZTY0LXR3bw==', user_id: '2' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('templates');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.user_id === '1');
+      expect(first).toMatchObject({
+        finger_type: '0',
+        template: 'YmFzZTY0LW9uZQ==',
+        user_id: '1',
+      });
+      expect(first?.finger_position ?? null).toBeNull();
+      // id is returned as a string (device wire shape)
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('templates', {
+        user_id: '2',
+        finger_type: '1',
+      });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]).toMatchObject({ user_id: '2' });
+
+      // modify
+      const modified = await store.modify(
+        'templates',
+        { finger_type: '0' },
+        { user_id: '2' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('templates', { user_id: '2' });
+      expect(afterModify[0]).toMatchObject({ finger_type: '0' });
+
+      // destroy
+      const destroyed = await store.destroy('templates', { user_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('templates');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ user_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('templates', [{ finger_type: '0', user_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

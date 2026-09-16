@@ -197,3 +197,85 @@ describe('ObjectStore.load — Property 10 (change_logs): filtered queries retur
     );
   });
 });
+
+/** The wire columns of `templates` that we generate/filter on. */
+const TEMPLATE_FILTERABLE_FIELDS = [
+  'finger_position',
+  'finger_type',
+  'template',
+  'user_id',
+] as const;
+
+type TemplateFilterableField = (typeof TEMPLATE_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single templates record (wire shape, all strings). */
+const templateRecordArb: fc.Arbitrary<Record<TemplateFilterableField, string>> = fc.record({
+  finger_position: smallValue,
+  finger_type: smallValue,
+  template: smallValue,
+  user_id: smallValue,
+});
+
+// Feature: controlid-facial-emulator, Property 10 (templates variant): for any set of templates records and any subset of valid filter parameters drawn from an existing record's own field values, load('templates', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (templates): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(templateRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...TEMPLATE_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('templates', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('templates', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              TEMPLATE_FILTERABLE_FIELDS.map((f) => String(r[f])).join('\u0001');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});

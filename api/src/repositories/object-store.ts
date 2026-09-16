@@ -33,7 +33,7 @@ import { and, eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import type { DrizzleDb } from '../db/connection.js';
-import { users, accessLogs, changeLogs } from '../db/schema.js';
+import { users, accessLogs, changeLogs, templates } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
 /**
@@ -103,6 +103,16 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       table_name: { column: changeLogs.tableName, schemaKey: 'tableName', numeric: false },
       table_id: { column: changeLogs.tableId, schemaKey: 'tableId', numeric: false },
       timestamp: { column: changeLogs.timestamp, schemaKey: 'timestamp', numeric: false },
+    },
+  },
+  templates: {
+    table: templates,
+    columns: {
+      id: { column: templates.id, schemaKey: 'id', numeric: true },
+      finger_position: { column: templates.fingerPosition, schemaKey: 'fingerPosition', numeric: false },
+      finger_type: { column: templates.fingerType, schemaKey: 'fingerType', numeric: false },
+      template: { column: templates.template, schemaKey: 'template', numeric: false },
+      user_id: { column: templates.userId, schemaKey: 'userId', numeric: false },
     },
   },
 };

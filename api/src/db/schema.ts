@@ -49,6 +49,14 @@ export const changeLogs = sqliteTable('change_logs', {
   timestamp: text('timestamp').notNull(),
 });
 
+export const templates = sqliteTable('templates', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  fingerPosition: text('finger_position'), // reserved field
+  fingerType: text('finger_type').notNull(), // 0 common finger, 1 panic finger
+  template: text('template'), // base64 biometric template payload
+  userId: text('user_id').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms
