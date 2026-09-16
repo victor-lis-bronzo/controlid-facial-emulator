@@ -142,6 +142,22 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS time_spans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    time_zone_id TEXT NOT NULL,
+    start TEXT NOT NULL,
+    end TEXT NOT NULL,
+    sun TEXT NOT NULL,
+    mon TEXT NOT NULL,
+    tue TEXT NOT NULL,
+    wed TEXT NOT NULL,
+    thu TEXT NOT NULL,
+    fri TEXT NOT NULL,
+    sat TEXT NOT NULL,
+    hol1 TEXT NOT NULL,
+    hol2 TEXT NOT NULL,
+    hol3 TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,

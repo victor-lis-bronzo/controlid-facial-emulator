@@ -879,6 +879,73 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad9.json()).toEqual({ areas: [] });
   });
+
+  it('time_spans: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+    const span = {
+      time_zone_id: '1',
+      start: '0',
+      end: '3600',
+      sun: '1',
+      mon: '1',
+      tue: '1',
+      wed: '1',
+      thu: '1',
+      fri: '1',
+      sat: '1',
+      hol1: '0',
+      hol2: '0',
+      hol3: '0',
+    };
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'time_spans', values: [span] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'time_spans' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { time_spans: Record<string, unknown>[] };
+    expect(loaded.time_spans.length).toBe(1);
+    expect(loaded.time_spans[0].time_zone_id).toBe('1');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'time_spans', values: { end: '7200' }, where: { time_zone_id: '1' } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'time_spans', where: { time_zone_id: '1' } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad10 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'time_spans' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad10.json()).toEqual({ time_spans: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

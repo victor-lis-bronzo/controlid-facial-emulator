@@ -118,6 +118,23 @@ export const areas = sqliteTable('areas', {
   name: text('name').notNull(),
 });
 
+export const timeSpans = sqliteTable('time_spans', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  timeZoneId: text('time_zone_id').notNull(),
+  start: text('start').notNull(),
+  end: text('end').notNull(),
+  sun: text('sun').notNull(),
+  mon: text('mon').notNull(),
+  tue: text('tue').notNull(),
+  wed: text('wed').notNull(),
+  thu: text('thu').notNull(),
+  fri: text('fri').notNull(),
+  sat: text('sat').notNull(),
+  hol1: text('hol1').notNull(),
+  hol2: text('hol2').notNull(),
+  hol3: text('hol3').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

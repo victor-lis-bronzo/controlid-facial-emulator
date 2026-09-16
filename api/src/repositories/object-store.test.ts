@@ -929,6 +929,120 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — time_spans empty and no-match (Req 4.2)', () => {
+    const baseSpan = {
+      time_zone_id: '1',
+      start: '0',
+      end: '3600',
+      sun: '1',
+      mon: '1',
+      tue: '1',
+      wed: '1',
+      thu: '1',
+      fri: '1',
+      sat: '1',
+      hol1: '0',
+      hol2: '0',
+      hol3: '0',
+    };
+
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('time_spans');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('time_spans', [baseSpan]);
+      const rows = await store.load('time_spans', { time_zone_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — time_spans filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('time_spans', [
+        {
+          time_zone_id: '1',
+          start: '0',
+          end: '3600',
+          sun: '1',
+          mon: '1',
+          tue: '1',
+          wed: '1',
+          thu: '1',
+          fri: '1',
+          sat: '1',
+          hol1: '0',
+          hol2: '0',
+          hol3: '0',
+        },
+      ]);
+      await expect(
+        store.load('time_spans', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('time_spans', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('time_spans CRUD happy path', () => {
+    const span1 = {
+      time_zone_id: '1',
+      start: '0',
+      end: '3600',
+      sun: '1',
+      mon: '1',
+      tue: '1',
+      wed: '1',
+      thu: '1',
+      fri: '1',
+      sat: '1',
+      hol1: '0',
+      hol2: '0',
+      hol3: '0',
+    };
+    const span2 = { ...span1, time_zone_id: '2', sun: '0' };
+
+    it('creates, loads, modifies, and destroys time_spans', async () => {
+      // create
+      const created = await store.create('time_spans', [span1, span2]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('time_spans');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.time_zone_id === '1');
+      expect(first).toMatchObject(span1);
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('time_spans', { time_zone_id: '2', sun: '0' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('time_spans', { end: '7200' }, { time_zone_id: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('time_spans', { time_zone_id: '2' });
+      expect(afterModify[0]).toMatchObject({ end: '7200' });
+
+      // destroy
+      const destroyed = await store.destroy('time_spans', { time_zone_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('time_spans');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ time_zone_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('time_spans', [{ ...span1, nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

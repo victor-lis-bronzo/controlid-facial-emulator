@@ -47,6 +47,7 @@ import {
   scheduledUnlocks,
   actions,
   areas,
+  timeSpans,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -200,6 +201,25 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       id: { column: areas.id, schemaKey: 'id', numeric: true },
       name: { column: areas.name, schemaKey: 'name', numeric: false },
+    },
+  },
+  time_spans: {
+    table: timeSpans,
+    columns: {
+      id: { column: timeSpans.id, schemaKey: 'id', numeric: true },
+      time_zone_id: { column: timeSpans.timeZoneId, schemaKey: 'timeZoneId', numeric: false },
+      start: { column: timeSpans.start, schemaKey: 'start', numeric: false },
+      end: { column: timeSpans.end, schemaKey: 'end', numeric: false },
+      sun: { column: timeSpans.sun, schemaKey: 'sun', numeric: false },
+      mon: { column: timeSpans.mon, schemaKey: 'mon', numeric: false },
+      tue: { column: timeSpans.tue, schemaKey: 'tue', numeric: false },
+      wed: { column: timeSpans.wed, schemaKey: 'wed', numeric: false },
+      thu: { column: timeSpans.thu, schemaKey: 'thu', numeric: false },
+      fri: { column: timeSpans.fri, schemaKey: 'fri', numeric: false },
+      sat: { column: timeSpans.sat, schemaKey: 'sat', numeric: false },
+      hol1: { column: timeSpans.hol1, schemaKey: 'hol1', numeric: false },
+      hol2: { column: timeSpans.hol2, schemaKey: 'hol2', numeric: false },
+      hol3: { column: timeSpans.hol3, schemaKey: 'hol3', numeric: false },
     },
   },
 };
