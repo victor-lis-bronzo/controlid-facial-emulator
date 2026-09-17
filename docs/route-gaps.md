@@ -11,7 +11,7 @@ below is either implemented or a Route Gap — never a permanent "out of
 scope". See [CONTEXT.md](../CONTEXT.md) for the Documented Divergence /
 Route Gap distinction.
 
-## Implemented (39)
+## Implemented (40)
 
 | Object | Table | Repository |
 | --- | --- | --- |
@@ -54,18 +54,16 @@ Route Gap distinction.
 | `alarm_zone_time_zones` | `alarmZoneTimeZones` | `api/src/repositories/object-store.ts` |
 | `contingency_card_access_rules` | `contingencyCardAccessRules` | `api/src/repositories/object-store.ts` |
 | `area_access_rules` | `areaAccessRules` | `api/src/repositories/object-store.ts` |
+| `network_interlocking_rules` | `networkInterlockingRules` | `api/src/repositories/object-store.ts` |
 
-## Route Gaps (1)
+## Route Gaps (0)
 
-`network_interlocking_rules`
-
-Each of these needs a dedicated Drizzle schema + `OBJECT_REGISTRY` entry per
-[spec #41](https://github.com/victor-lis-bronzo/controlid-facial-emulator/issues/41)
-(Padrão A, replicating `users`/`access_logs`/`change_logs`/`templates`/`cards`/
-`qrcodes`/`uhf_tags`/`pins`/`alarm_zones`/`user_roles`), tracked as individual
-tickets on GitHub Issues #50–#76 (ticket numbers don't run in the same order
-as this list — check each issue's title rather than assuming a range maps to
-a specific object; `user_roles` is done via #65, not #50).
+All ~40 documented Access API object types are implemented. The object-CRUD
+side of [spec #41](https://github.com/victor-lis-bronzo/controlid-facial-emulator/issues/41)
+(tickets #43–#76) is complete; see git history for the individual
+`feat(api): implement <object> Access API object (#N)` commits. Per
+[ADR 0002](adr/0002-full-route-coverage-mocked-hardware.md), the remaining
+uncovered surface is the action endpoints listed below, not object CRUD.
 
 ## Action endpoints (not object CRUD)
 

@@ -2206,6 +2206,67 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad31.json()).toEqual({ area_access_rules: [] });
   });
+
+  it('network_interlocking_rules: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'network_interlocking_rules',
+        values: [
+          { ip: '192.168.0.10', login: 'admin', password: 'secret', portal_name: 'Gate A', enabled: '1' },
+        ],
+      },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'network_interlocking_rules' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { network_interlocking_rules: Record<string, unknown>[] };
+    expect(loaded.network_interlocking_rules.length).toBe(1);
+    expect(loaded.network_interlocking_rules[0].portal_name).toBe('Gate A');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'network_interlocking_rules',
+        values: { enabled: '0' },
+        where: { portal_name: 'Gate A' },
+      },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'network_interlocking_rules', where: { portal_name: 'Gate A' } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad32 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'network_interlocking_rules' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad32.json()).toEqual({ network_interlocking_rules: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

@@ -69,6 +69,7 @@ import {
   alarmZoneTimeZones,
   contingencyCardAccessRules,
   areaAccessRules,
+  networkInterlockingRules,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -464,6 +465,17 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       area_id: { column: areaAccessRules.areaId, schemaKey: 'areaId', numeric: true },
       access_rule_id: { column: areaAccessRules.accessRuleId, schemaKey: 'accessRuleId', numeric: true },
+    },
+  },
+  network_interlocking_rules: {
+    table: networkInterlockingRules,
+    columns: {
+      id: { column: networkInterlockingRules.id, schemaKey: 'id', numeric: true },
+      ip: { column: networkInterlockingRules.ip, schemaKey: 'ip', numeric: false },
+      login: { column: networkInterlockingRules.login, schemaKey: 'login', numeric: false },
+      password: { column: networkInterlockingRules.password, schemaKey: 'password', numeric: false },
+      portal_name: { column: networkInterlockingRules.portalName, schemaKey: 'portalName', numeric: false },
+      enabled: { column: networkInterlockingRules.enabled, schemaKey: 'enabled', numeric: false },
     },
   },
 };

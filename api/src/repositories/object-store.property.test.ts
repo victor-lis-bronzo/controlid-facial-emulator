@@ -2304,6 +2304,91 @@ describe('ObjectStore.load — Property 10 (area_access_rules): filtered queries
   });
 });
 
+/** The wire columns of `network_interlocking_rules` that we generate/filter on. */
+const NETWORK_INTERLOCKING_FILTERABLE_FIELDS = [
+  'ip',
+  'login',
+  'password',
+  'portal_name',
+  'enabled',
+] as const;
+
+type NetworkInterlockingFilterableField = (typeof NETWORK_INTERLOCKING_FILTERABLE_FIELDS)[number];
+
+/** Generator for a single network_interlocking_rules record (wire shape, all strings). */
+const networkInterlockingRecordArb: fc.Arbitrary<Record<NetworkInterlockingFilterableField, string>> =
+  fc.record({
+    ip: smallValue,
+    login: smallValue,
+    password: smallValue,
+    portal_name: smallValue,
+    enabled: smallValue,
+  });
+
+// Feature: controlid-facial-emulator, Property 10 (network_interlocking_rules variant): for any set of network_interlocking_rules records and any subset of valid filter parameters drawn from an existing record's own field values, load('network_interlocking_rules', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (network_interlocking_rules): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(networkInterlockingRecordArb, { minLength: 1, maxLength: 12 }),
+        fc.subarray([...NETWORK_INTERLOCKING_FILTERABLE_FIELDS]),
+        fc.nat(),
+        async (records, filterFields, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+            await store.create('network_interlocking_rules', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = {};
+            for (const field of filterFields) {
+              filters[field] = pivot[field];
+            }
+
+            const expected = records.filter((rec) =>
+              filterFields.every((field) => rec[field] === pivot[field]),
+            );
+
+            const loaded = await store.load('network_interlocking_rules', filters);
+
+            const key = (r: Record<string, unknown>): string =>
+              NETWORK_INTERLOCKING_FILTERABLE_FIELDS.map((f) => String(r[f])).join('');
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
+
 // Feature: controlid-facial-emulator, Property 10 (user_groups variant): for any set of user_groups associations (reusing the admin-panel users_groups table) and any subset of valid filter parameters drawn from an existing record's own field values, load('user_groups', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
 describe('ObjectStore.load — Property 10 (user_groups): filtered queries return the exact matching subset', () => {
   it('returns precisely the records matching every supplied filter (AND semantics)', async () => {

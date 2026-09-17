@@ -2478,6 +2478,84 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — network_interlocking_rules empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('network_interlocking_rules');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('network_interlocking_rules', [
+        { ip: '192.168.0.10', login: 'admin', password: 'secret', portal_name: 'Gate A', enabled: '1' },
+      ]);
+      const rows = await store.load('network_interlocking_rules', { ip: '10.0.0.1' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — network_interlocking_rules filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('network_interlocking_rules', [
+        { ip: '192.168.0.10', login: 'admin', password: 'secret', portal_name: 'Gate A', enabled: '1' },
+      ]);
+      await expect(
+        store.load('network_interlocking_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('network_interlocking_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('network_interlocking_rules CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys network_interlocking_rules', async () => {
+      // create
+      const created = await store.create('network_interlocking_rules', [
+        { ip: '192.168.0.10', login: 'admin', password: 'secret', portal_name: 'Gate A', enabled: '1' },
+        { ip: '192.168.0.11', login: 'admin', password: 'secret', portal_name: 'Gate B', enabled: '1' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+      expect(created.ids[0]).toBeGreaterThan(0);
+      expect(created.ids[1]).toBe(created.ids[0] + 1);
+
+      // load all
+      const all = await store.load('network_interlocking_rules');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.portal_name === 'Gate A');
+      expect(first).toMatchObject({ ip: '192.168.0.10', login: 'admin', enabled: '1' });
+      expect(typeof first?.id).toBe('string');
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('network_interlocking_rules', { portal_name: 'Gate B' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify(
+        'network_interlocking_rules',
+        { enabled: '0' },
+        { portal_name: 'Gate B' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('network_interlocking_rules', { portal_name: 'Gate B' });
+      expect(afterModify[0]).toMatchObject({ enabled: '0' });
+
+      // destroy
+      const destroyed = await store.destroy('network_interlocking_rules', { portal_name: 'Gate A' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('network_interlocking_rules');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ portal_name: 'Gate B' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('network_interlocking_rules', [
+          { ip: '1.1.1.1', login: 'a', password: 'b', portal_name: 'x', enabled: '1', nope: 'x' },
+        ]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {
