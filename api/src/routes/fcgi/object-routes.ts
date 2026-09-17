@@ -51,7 +51,6 @@ import { BadRequestError, HttpError } from '../errors.js';
 import {
   ACCEPTED_FORMATS_MESSAGE,
   ACCEPTED_MIMES,
-  MAX_PHOTO_BYTES,
   isFileTooLargeError,
   sniffImageMime,
 } from '../photo-validation.js';
