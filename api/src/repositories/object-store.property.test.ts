@@ -2203,6 +2203,39 @@ describe('ObjectStore.load — Property 10 (alarm_zone_time_zones): filtered que
   });
 });
 
+// Feature: controlid-facial-emulator, Property 10 (contingency_card_access_rules variant): for any set of contingency_card_access_rules records (sole-column PK, no FK enforcement) and any subset of valid filter parameters drawn from an existing record's own field values, load('contingency_card_access_rules', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (contingency_card_access_rules): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.uniqueArray(fc.nat({ max: 20 }), { minLength: 1, maxLength: 12 }),
+        fc.nat(),
+        async (ruleIdxs, pivotSeed) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+
+            const records = ruleIdxs.map((idx) => ({ access_rule_id: String(idx) }));
+            await store.create('contingency_card_access_rules', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const filters: Record<string, string> = { access_rule_id: pivot.access_rule_id };
+
+            const expected = records.filter((rec) => rec.access_rule_id === pivot.access_rule_id);
+
+            const loaded = await store.load('contingency_card_access_rules', filters);
+
+            return loaded.length === expected.length;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
+
 // Feature: controlid-facial-emulator, Property 10 (user_groups variant): for any set of user_groups associations (reusing the admin-panel users_groups table) and any subset of valid filter parameters drawn from an existing record's own field values, load('user_groups', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
 describe('ObjectStore.load — Property 10 (user_groups): filtered queries return the exact matching subset', () => {
   it('returns precisely the records matching every supplied filter (AND semantics)', async () => {

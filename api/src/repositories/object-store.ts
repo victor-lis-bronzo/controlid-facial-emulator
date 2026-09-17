@@ -67,6 +67,7 @@ import {
   accessLogAccessRules,
   portalActions,
   alarmZoneTimeZones,
+  contingencyCardAccessRules,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -445,6 +446,16 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       alarm_zone_id: { column: alarmZoneTimeZones.alarmZoneId, schemaKey: 'alarmZoneId', numeric: true },
       time_zone_id: { column: alarmZoneTimeZones.timeZoneId, schemaKey: 'timeZoneId', numeric: true },
+    },
+  },
+  contingency_card_access_rules: {
+    table: contingencyCardAccessRules,
+    columns: {
+      access_rule_id: {
+        column: contingencyCardAccessRules.accessRuleId,
+        schemaKey: 'accessRuleId',
+        numeric: true,
+      },
     },
   },
 };

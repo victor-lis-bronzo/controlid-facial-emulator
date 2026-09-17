@@ -2346,6 +2346,73 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — contingency_card_access_rules empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('contingency_card_access_rules');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('contingency_card_access_rules', [{ access_rule_id: '5' }]);
+      const rows = await store.load('contingency_card_access_rules', { access_rule_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — contingency_card_access_rules filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('contingency_card_access_rules', [{ access_rule_id: '5' }]);
+      await expect(
+        store.load('contingency_card_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('contingency_card_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('contingency_card_access_rules CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys contingency_card_access_rules', async () => {
+      // create
+      const created = await store.create('contingency_card_access_rules', [{ access_rule_id: '5' }]);
+      expect(created.ids).toHaveLength(1);
+
+      // load all
+      const all = await store.load('contingency_card_access_rules');
+      expect(all).toHaveLength(1);
+      expect(all[0]).toMatchObject({ access_rule_id: '5' });
+
+      // modify
+      const modified = await store.modify(
+        'contingency_card_access_rules',
+        { access_rule_id: '6' },
+        { access_rule_id: '5' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('contingency_card_access_rules', { access_rule_id: '6' });
+      expect(afterModify).toHaveLength(1);
+
+      // destroy
+      const destroyed = await store.destroy('contingency_card_access_rules', { access_rule_id: '6' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('contingency_card_access_rules');
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('defaults access_rule_id to 1 when not supplied on create', async () => {
+      const created = await store.create('contingency_card_access_rules', [{}]);
+      expect(created.ids).toHaveLength(1);
+      const all = await store.load('contingency_card_access_rules');
+      expect(all).toEqual([{ access_rule_id: '1' }]);
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('contingency_card_access_rules', [{ access_rule_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {
