@@ -2236,6 +2236,74 @@ describe('ObjectStore.load — Property 10 (contingency_card_access_rules): filt
   });
 });
 
+// Feature: controlid-facial-emulator, Property 10 (area_access_rules variant): for any set of area_access_rules associations (Padrão A, no FK enforcement) and any subset of valid filter parameters drawn from an existing record's own field values, load('area_access_rules', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (area_access_rules): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.uniqueArray(fc.tuple(fc.nat({ max: 5 }), fc.nat({ max: 5 })), {
+          selector: ([areaIdx, ruleIdx]) => `${areaIdx}${ruleIdx}`,
+          minLength: 1,
+          maxLength: 12,
+        }),
+        fc.nat(),
+        fc.boolean(),
+        async (pairs, pivotSeed, filterByArea) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+
+            const records = pairs.map(([areaIdx, ruleIdx]) => ({
+              area_id: String(areaIdx),
+              access_rule_id: String(ruleIdx),
+            }));
+            await store.create('area_access_rules', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const field = filterByArea ? 'area_id' : 'access_rule_id';
+            const filters: Record<string, string> = { [field]: pivot[field] };
+
+            const expected = records.filter((rec) => rec[field] === pivot[field]);
+
+            const loaded = await store.load('area_access_rules', filters);
+
+            const key = (r: Record<string, unknown>): string => `${r.area_id}${r.access_rule_id}`;
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 150 },
+    );
+  });
+});
+
 // Feature: controlid-facial-emulator, Property 10 (user_groups variant): for any set of user_groups associations (reusing the admin-panel users_groups table) and any subset of valid filter parameters drawn from an existing record's own field values, load('user_groups', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
 describe('ObjectStore.load — Property 10 (user_groups): filtered queries return the exact matching subset', () => {
   it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
