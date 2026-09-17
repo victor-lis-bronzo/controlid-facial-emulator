@@ -13,7 +13,7 @@ import { ObjectStore } from './object-store.js';
 import { UserRepository } from './user-repository.js';
 import { InMemoryPhotoStorage } from './photo-storage-memory.js';
 import { ValidationError } from './errors.js';
-import { groups, portals, accessRules } from '../db/schema.js';
+import { groups, portals, accessRules, timeZones } from '../db/schema.js';
 
 describe('ObjectStore', () => {
   let db: DrizzleDb;
@@ -2010,6 +2010,61 @@ describe('ObjectStore', () => {
     it('throws ValidationError when creating with an unknown column', async () => {
       await expect(
         store.create('group_access_rules', [{ group_id: '1', access_rule_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
+
+  describe('access_rule_time_zones (reuses the admin-panel access_rule_time_zones table)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('access_rule_time_zones');
+      expect(rows).toEqual([]);
+    });
+
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await expect(
+        store.load('access_rule_time_zones', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('access_rule_time_zones', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+
+    it('creates, loads, modifies, and destroys access_rule_time_zones', async () => {
+      const ruleId = Number(db.insert(accessRules).values({ name: 'R1' }).run().lastInsertRowid);
+      const tz1Id = Number(db.insert(timeZones).values({ name: 'TZ1' }).run().lastInsertRowid);
+      const tz2Id = Number(db.insert(timeZones).values({ name: 'TZ2' }).run().lastInsertRowid);
+
+      // create
+      const created = await store.create('access_rule_time_zones', [
+        { access_rule_id: String(ruleId), time_zone_id: String(tz1Id) },
+      ]);
+      expect(created.ids).toHaveLength(1);
+
+      // load all
+      const all = await store.load('access_rule_time_zones');
+      expect(all).toHaveLength(1);
+      expect(all[0]).toMatchObject({ access_rule_id: String(ruleId), time_zone_id: String(tz1Id) });
+
+      // modify — move the rule from tz1 to tz2
+      const modified = await store.modify(
+        'access_rule_time_zones',
+        { time_zone_id: String(tz2Id) },
+        { access_rule_id: String(ruleId), time_zone_id: String(tz1Id) },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('access_rule_time_zones', { time_zone_id: String(tz2Id) });
+      expect(afterModify).toHaveLength(1);
+
+      // destroy
+      const destroyed = await store.destroy('access_rule_time_zones', { time_zone_id: String(tz2Id) });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('access_rule_time_zones');
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('access_rule_time_zones', [{ access_rule_id: '1', time_zone_id: '1', nope: 'x' }]),
       ).rejects.toThrowError(/nope/);
     });
   });

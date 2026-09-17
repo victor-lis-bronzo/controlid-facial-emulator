@@ -62,6 +62,7 @@ import {
   usersGroups,
   accessRulePortals,
   accessRuleGroups,
+  accessRuleTimeZones,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -388,6 +389,24 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       access_rule_id: {
         column: accessRuleGroups.accessRuleId,
         schemaKey: 'accessRuleId',
+        numeric: true,
+      },
+    },
+  },
+  // Reuses the admin-panel's `access_rule_time_zones` table (Padrão B) —
+  // same real-world association, exposed here through the device wire
+  // protocol.
+  access_rule_time_zones: {
+    table: accessRuleTimeZones,
+    columns: {
+      access_rule_id: {
+        column: accessRuleTimeZones.accessRuleId,
+        schemaKey: 'accessRuleId',
+        numeric: true,
+      },
+      time_zone_id: {
+        column: accessRuleTimeZones.timeZoneId,
+        schemaKey: 'timeZoneId',
         numeric: true,
       },
     },

@@ -1788,6 +1788,100 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     expect(finalLoad24.json()).toEqual({ group_access_rules: [] });
   });
+
+  it('access_rule_time_zones: full create → load → modify → destroy cycle (reuses access_rule_time_zones)', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const timeZoneResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/time-zones?session=${token}`,
+      payload: { name: 'TZ1', timeRanges: [{ days: ['mon'], startTime: '09:00', endTime: '17:00' }] },
+      headers: jsonHeaders(),
+    });
+    const timeZoneId = (timeZoneResponse.json() as { id: number }).id;
+
+    // A second time zone satisfies the access rule's mandatory timeZoneIds
+    // (Req 7.3) without pre-associating timeZoneId, so the .fcgi create
+    // below still starts fresh for that (access_rule_id, time_zone_id) pair.
+    const otherTimeZoneResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/time-zones?session=${token}`,
+      payload: { name: 'TZ2', timeRanges: [{ days: ['tue'], startTime: '09:00', endTime: '17:00' }] },
+      headers: jsonHeaders(),
+    });
+    const otherTimeZoneId = (otherTimeZoneResponse.json() as { id: number }).id;
+
+    const groupResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/groups?session=${token}`,
+      payload: { name: 'G1' },
+      headers: jsonHeaders(),
+    });
+    const groupId = (groupResponse.json() as { id: number }).id;
+
+    const portalResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/portals?session=${token}`,
+      payload: { name: 'P1' },
+      headers: jsonHeaders(),
+    });
+    const portalId = (portalResponse.json() as { id: number }).id;
+
+    // groupIds/timeZoneIds/portalIds must each be non-empty (Req 7.3) for
+    // the access rule itself to be created.
+    const ruleResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/access-rules?session=${token}`,
+      payload: {
+        name: 'R1',
+        groupIds: [groupId],
+        timeZoneIds: [otherTimeZoneId],
+        portalIds: [portalId],
+      },
+      headers: jsonHeaders(),
+    });
+    const ruleId = (ruleResponse.json() as { id: number }).id;
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'access_rule_time_zones',
+        values: [{ access_rule_id: String(ruleId), time_zone_id: String(timeZoneId) }],
+      },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rule_time_zones', where: { time_zone_id: String(timeZoneId) } },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { access_rule_time_zones: Record<string, unknown>[] };
+    expect(loaded.access_rule_time_zones.length).toBe(1);
+    expect(loaded.access_rule_time_zones[0].access_rule_id).toBe(String(ruleId));
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rule_time_zones', where: { time_zone_id: String(timeZoneId) } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad25 = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rule_time_zones', where: { time_zone_id: String(timeZoneId) } },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad25.json()).toEqual({ access_rule_time_zones: [] });
+  });
 });
 
 describe('new_user_identified.fcgi (device callback)', () => {

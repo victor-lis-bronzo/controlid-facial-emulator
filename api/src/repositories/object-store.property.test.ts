@@ -8,7 +8,7 @@ import { describe, it } from 'vitest';
 import fc from 'fast-check';
 import { createDb } from '../db/connection.js';
 import { ObjectStore } from './object-store.js';
-import { groups, portals, accessRules } from '../db/schema.js';
+import { groups, portals, accessRules, timeZones } from '../db/schema.js';
 
 /**
  * The wire columns of `access_logs` that we generate/filter on. `id` is
@@ -2050,6 +2050,83 @@ describe('ObjectStore.load — Property 10 (group_access_rules): filtered querie
             const loaded = await store.load('group_access_rules', filters);
 
             const key = (r: Record<string, unknown>): string => `${r.group_id}${r.access_rule_id}`;
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
+// Feature: controlid-facial-emulator, Property 10 (access_rule_time_zones variant): for any set of access_rule_time_zones associations (reusing the admin-panel access_rule_time_zones table) and any subset of valid filter parameters drawn from an existing record's own field values, load('access_rule_time_zones', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (access_rule_time_zones): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.uniqueArray(fc.tuple(fc.nat({ max: 5 }), fc.nat({ max: 5 })), {
+          selector: ([ruleIdx, tzIdx]) => `${ruleIdx}${tzIdx}`,
+          minLength: 1,
+          maxLength: 12,
+        }),
+        fc.nat(),
+        fc.boolean(),
+        async (pairs, pivotSeed, filterByRule) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+
+            const ruleIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              ruleIds.push(Number(db.insert(accessRules).values({ name: `R${i}` }).run().lastInsertRowid));
+            }
+            const tzIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              tzIds.push(Number(db.insert(timeZones).values({ name: `TZ${i}` }).run().lastInsertRowid));
+            }
+
+            const records = pairs.map(([ruleIdx, tzIdx]) => ({
+              access_rule_id: String(ruleIds[ruleIdx]),
+              time_zone_id: String(tzIds[tzIdx]),
+            }));
+            await store.create('access_rule_time_zones', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const field = filterByRule ? 'access_rule_id' : 'time_zone_id';
+            const filters: Record<string, string> = { [field]: pivot[field] };
+
+            const expected = records.filter((rec) => rec[field] === pivot[field]);
+
+            const loaded = await store.load('access_rule_time_zones', filters);
+
+            const key = (r: Record<string, unknown>): string => `${r.access_rule_id}${r.time_zone_id}`;
 
             const expectedCounts = new Map<string, number>();
             for (const r of expected) {
