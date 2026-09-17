@@ -16,6 +16,10 @@ _Avoid_: Person, Account
 A moldura estrutural web embarcada (header e sidebar) servida pela leitora para abrigar e organizar a navegação entre as seções administrativas.
 _Avoid_: AppShell, MasterLayout, AdminTemplate
 
+**Admin Management Panel**:
+A implementação anterior da interface administrativa web, construída sobre uma API REST própria (`/api/admin/*`) com hash router, entregue pela spec `.kiro/specs/admin-management-panel`. Seu código ainda existe no repositório (`App.tsx`, `sections/`), mas não está montado pela aplicação em execução (`main.tsx`/`AppRouter.tsx`) — é código órfão até que seu destino seja decidido. Distinta da WebGUI (a reescrita atual, fiel ao dispositivo físico, consumindo exclusivamente `.fcgi`).
+_Avoid_: Painel Admin (ver WebGUI/_Avoid_ — essa frase hoje só deve se referir a este conceito, nunca à WebGUI), Old Panel, Legacy Panel, REST Panel
+
 **User_Photo**:
 A fotografia biométrica facial associada a um User, persistida no armazenamento de arquivos da leitora e servida/manipulada exclusivamente através dos endpoints .fcgi.
 _Avoid_: AvatarImage, ProfilePic, UserPicture
