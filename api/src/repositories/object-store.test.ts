@@ -2274,6 +2274,78 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — alarm_zone_time_zones empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('alarm_zone_time_zones');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('alarm_zone_time_zones', [{ alarm_zone_id: '1', time_zone_id: '1' }]);
+      const rows = await store.load('alarm_zone_time_zones', { alarm_zone_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — alarm_zone_time_zones filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('alarm_zone_time_zones', [{ alarm_zone_id: '1', time_zone_id: '1' }]);
+      await expect(
+        store.load('alarm_zone_time_zones', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('alarm_zone_time_zones', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('alarm_zone_time_zones CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys alarm_zone_time_zones', async () => {
+      // create
+      const created = await store.create('alarm_zone_time_zones', [
+        { alarm_zone_id: '1', time_zone_id: '1' },
+        { alarm_zone_id: '2', time_zone_id: '1' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+
+      // load all
+      const all = await store.load('alarm_zone_time_zones');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.alarm_zone_id === '1');
+      expect(first).toMatchObject({ alarm_zone_id: '1', time_zone_id: '1' });
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('alarm_zone_time_zones', {
+        alarm_zone_id: '2',
+        time_zone_id: '1',
+      });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify(
+        'alarm_zone_time_zones',
+        { time_zone_id: '2' },
+        { alarm_zone_id: '2' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('alarm_zone_time_zones', { alarm_zone_id: '2' });
+      expect(afterModify[0]).toMatchObject({ time_zone_id: '2' });
+
+      // destroy
+      const destroyed = await store.destroy('alarm_zone_time_zones', { alarm_zone_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('alarm_zone_time_zones');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ alarm_zone_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('alarm_zone_time_zones', [{ alarm_zone_id: '1', time_zone_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {
