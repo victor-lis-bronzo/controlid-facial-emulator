@@ -2209,6 +2209,71 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — portal_actions empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('portal_actions');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('portal_actions', [{ portal_id: '1', action_id: '1' }]);
+      const rows = await store.load('portal_actions', { portal_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — portal_actions filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('portal_actions', [{ portal_id: '1', action_id: '1' }]);
+      await expect(
+        store.load('portal_actions', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('portal_actions', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('portal_actions CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys portal_actions', async () => {
+      // create
+      const created = await store.create('portal_actions', [
+        { portal_id: '1', action_id: '1' },
+        { portal_id: '2', action_id: '1' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+
+      // load all
+      const all = await store.load('portal_actions');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.portal_id === '1');
+      expect(first).toMatchObject({ portal_id: '1', action_id: '1' });
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('portal_actions', { portal_id: '2', action_id: '1' });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify('portal_actions', { action_id: '2' }, { portal_id: '2' });
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('portal_actions', { portal_id: '2' });
+      expect(afterModify[0]).toMatchObject({ action_id: '2' });
+
+      // destroy
+      const destroyed = await store.destroy('portal_actions', { portal_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('portal_actions');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ portal_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('portal_actions', [{ portal_id: '1', action_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

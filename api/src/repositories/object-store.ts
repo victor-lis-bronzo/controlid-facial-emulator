@@ -65,6 +65,7 @@ import {
   accessRuleTimeZones,
   userAccessRules,
   accessLogAccessRules,
+  portalActions,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -429,6 +430,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
         schemaKey: 'accessRuleId',
         numeric: true,
       },
+    },
+  },
+  portal_actions: {
+    table: portalActions,
+    columns: {
+      portal_id: { column: portalActions.portalId, schemaKey: 'portalId', numeric: true },
+      action_id: { column: portalActions.actionId, schemaKey: 'actionId', numeric: true },
     },
   },
 };
