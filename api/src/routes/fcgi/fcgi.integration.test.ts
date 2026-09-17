@@ -1623,6 +1623,17 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     const portalId = (portalResponse.json() as { id: number }).id;
 
+    // A second portal satisfies the access rule's mandatory portalIds (Req
+    // 7.3) without pre-associating portalId, so the .fcgi create below
+    // still starts fresh for that (access_rule_id, portal_id) pair.
+    const otherPortalResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/portals?session=${token}`,
+      payload: { name: 'P2' },
+      headers: jsonHeaders(),
+    });
+    const otherPortalId = (otherPortalResponse.json() as { id: number }).id;
+
     const groupResponse = await harness.app.inject({
       method: 'POST',
       url: `/api/admin/groups?session=${token}`,
@@ -1631,12 +1642,20 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     });
     const groupId = (groupResponse.json() as { id: number }).id;
 
-    // groupIds satisfies the "must reference at least one entity" rule
-    // without pre-associating a portal, so the .fcgi create below is fresh.
+    const timeZoneResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/time-zones?session=${token}`,
+      payload: { name: 'TZ1', timeRanges: [{ days: ['mon'], startTime: '09:00', endTime: '17:00' }] },
+      headers: jsonHeaders(),
+    });
+    const timeZoneId = (timeZoneResponse.json() as { id: number }).id;
+
+    // groupIds/timeZoneIds/portalIds must each be non-empty (Req 7.3) for
+    // the access rule itself to be created.
     const ruleResponse = await harness.app.inject({
       method: 'POST',
       url: `/api/admin/access-rules?session=${token}`,
-      payload: { name: 'R1', groupIds: [groupId] },
+      payload: { name: 'R1', groupIds: [groupId], timeZoneIds: [timeZoneId], portalIds: [otherPortalId] },
       headers: jsonHeaders(),
     });
     const ruleId = (ruleResponse.json() as { id: number }).id;
@@ -1655,7 +1674,7 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     const loadResponse = await harness.app.inject({
       method: 'POST',
       url: `/load_objects.fcgi?session=${token}`,
-      payload: { object: 'portal_access_rules' },
+      payload: { object: 'portal_access_rules', where: { portal_id: String(portalId) } },
       headers: jsonHeaders(),
     });
     expect(loadResponse.statusCode).toBe(200);
@@ -1675,7 +1694,7 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     const finalLoad23 = await harness.app.inject({
       method: 'POST',
       url: `/load_objects.fcgi?session=${token}`,
-      payload: { object: 'portal_access_rules' },
+      payload: { object: 'portal_access_rules', where: { portal_id: String(portalId) } },
       headers: jsonHeaders(),
     });
     expect(finalLoad23.json()).toEqual({ portal_access_rules: [] });
