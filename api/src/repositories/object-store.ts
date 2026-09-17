@@ -64,6 +64,7 @@ import {
   accessRuleGroups,
   accessRuleTimeZones,
   userAccessRules,
+  accessLogAccessRules,
 } from '../db/schema.js';
 import { ValidationError } from './errors.js';
 
@@ -417,6 +418,17 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       user_id: { column: userAccessRules.userId, schemaKey: 'userId', numeric: true },
       access_rule_id: { column: userAccessRules.accessRuleId, schemaKey: 'accessRuleId', numeric: true },
+    },
+  },
+  access_log_access_rules: {
+    table: accessLogAccessRules,
+    columns: {
+      access_log_id: { column: accessLogAccessRules.accessLogId, schemaKey: 'accessLogId', numeric: true },
+      access_rule_id: {
+        column: accessLogAccessRules.accessRuleId,
+        schemaKey: 'accessRuleId',
+        numeric: true,
+      },
     },
   },
 };

@@ -2137,6 +2137,78 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('load — access_log_access_rules empty and no-match (Req 4.2)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('access_log_access_rules');
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty array when no record matches the filters', async () => {
+      await store.create('access_log_access_rules', [{ access_log_id: '1', access_rule_id: '1' }]);
+      const rows = await store.load('access_log_access_rules', { access_log_id: '999' });
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('load — access_log_access_rules filter validation (Req 4.5)', () => {
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await store.create('access_log_access_rules', [{ access_log_id: '1', access_rule_id: '1' }]);
+      await expect(
+        store.load('access_log_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('access_log_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+  });
+
+  describe('access_log_access_rules CRUD happy path', () => {
+    it('creates, loads, modifies, and destroys access_log_access_rules', async () => {
+      // create
+      const created = await store.create('access_log_access_rules', [
+        { access_log_id: '1', access_rule_id: '1' },
+        { access_log_id: '2', access_rule_id: '1' },
+      ]);
+      expect(created.ids).toHaveLength(2);
+
+      // load all
+      const all = await store.load('access_log_access_rules');
+      expect(all).toHaveLength(2);
+      const first = all.find((r) => r.access_log_id === '1');
+      expect(first).toMatchObject({ access_log_id: '1', access_rule_id: '1' });
+
+      // load filtered (AND semantics)
+      const filtered = await store.load('access_log_access_rules', {
+        access_log_id: '2',
+        access_rule_id: '1',
+      });
+      expect(filtered).toHaveLength(1);
+
+      // modify
+      const modified = await store.modify(
+        'access_log_access_rules',
+        { access_rule_id: '2' },
+        { access_log_id: '2' },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('access_log_access_rules', { access_log_id: '2' });
+      expect(afterModify[0]).toMatchObject({ access_rule_id: '2' });
+
+      // destroy
+      const destroyed = await store.destroy('access_log_access_rules', { access_log_id: '1' });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('access_log_access_rules');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]).toMatchObject({ access_log_id: '2' });
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('access_log_access_rules', [{ access_log_id: '1', access_rule_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {
