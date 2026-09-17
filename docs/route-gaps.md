@@ -11,7 +11,7 @@ below is either implemented or a Route Gap — never a permanent "out of
 scope". See [CONTEXT.md](../CONTEXT.md) for the Documented Divergence /
 Route Gap distinction.
 
-## Implemented (33)
+## Implemented (34)
 
 | Object | Table | Repository |
 | --- | --- | --- |
@@ -48,13 +48,14 @@ Route Gap distinction.
 | `portal_access_rules` | `accessRulePortals` (reused from Padrão B) | `api/src/repositories/object-store.ts` |
 | `group_access_rules` | `accessRuleGroups` (reused from Padrão B) | `api/src/repositories/object-store.ts` |
 | `access_rule_time_zones` | `accessRuleTimeZones` (reused from Padrão B) | `api/src/repositories/object-store.ts` |
+| `user_access_rules` | `userAccessRules` | `api/src/repositories/object-store.ts` |
 
-## Route Gaps (7)
+## Route Gaps (6)
 
 `portal_actions`,
 `contingency_card_access_rules`,
 `alarm_zone_time_zones`,
-`access_log_access_rules`, `user_access_rules`,
+`access_log_access_rules`,
 `area_access_rules`,
 `network_interlocking_rules`
 

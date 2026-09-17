@@ -228,6 +228,84 @@ export const customThresholds = sqliteTable('custom_thresholds', {
   threshold: text('threshold').notNull(),
 });
 
+// `user_id`/`access_rule_id` form the device-assigned composite PK for this
+// object, per docs/route-gaps-field-reference.md.
+export const userAccessRules = sqliteTable(
+  'user_access_rules',
+  {
+    userId: integer('user_id').notNull(),
+    accessRuleId: integer('access_rule_id').notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.accessRuleId] }) }),
+);
+
+// `access_log_id`/`access_rule_id` form the device-assigned composite PK,
+// per docs/route-gaps-field-reference.md.
+export const accessLogAccessRules = sqliteTable(
+  'access_log_access_rules',
+  {
+    accessLogId: integer('access_log_id').notNull(),
+    accessRuleId: integer('access_rule_id').notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.accessLogId, t.accessRuleId] }) }),
+);
+
+// `portal_id`/`action_id` form the device-assigned composite PK. `action_id`
+// refers to `actions.group_id` (that table's PK), not `actions.id` — Padrão
+// A, no `.references()`, per docs/route-gaps-field-reference.md.
+export const portalActions = sqliteTable(
+  'portal_actions',
+  {
+    portalId: integer('portal_id').notNull(),
+    actionId: integer('action_id').notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.portalId, t.actionId] }) }),
+);
+
+// `alarm_zone_id`/`time_zone_id` form the device-assigned composite PK.
+// `alarm_zone_id` refers to `alarm_zones.zone` (that table's PK), not
+// `alarm_zones.id` (no `id` column exists), per
+// docs/route-gaps-field-reference.md.
+export const alarmZoneTimeZones = sqliteTable(
+  'alarm_zone_time_zones',
+  {
+    alarmZoneId: integer('alarm_zone_id').notNull(),
+    timeZoneId: integer('time_zone_id').notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.alarmZoneId, t.timeZoneId] }) }),
+);
+
+// Single global "which access rule governs contingency mode" setting — not a
+// per-card association despite the name (no FK to `contingency_cards`).
+// `access_rule_id` is the sole column and PK, defaulting to 1, per
+// docs/route-gaps-field-reference.md.
+export const contingencyCardAccessRules = sqliteTable('contingency_card_access_rules', {
+  accessRuleId: integer('access_rule_id').primaryKey().default(1),
+});
+
+// `area_id`/`access_rule_id` form the device-assigned composite PK, per
+// docs/route-gaps-field-reference.md.
+export const areaAccessRules = sqliteTable(
+  'area_access_rules',
+  {
+    areaId: integer('area_id').notNull(),
+    accessRuleId: integer('access_rule_id').notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.areaId, t.accessRuleId] }) }),
+);
+
+// Standalone entity: no FK columns at all — a remote-device (device-to-
+// device) network interlock configuration, per
+// docs/route-gaps-field-reference.md.
+export const networkInterlockingRules = sqliteTable('network_interlocking_rules', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  ip: text('ip').notNull(),
+  login: text('login').notNull(),
+  password: text('password').notNull(),
+  portalName: text('portal_name').notNull(),
+  enabled: text('enabled').notNull(),
+});
+
 export const sessions = sqliteTable('sessions', {
   token: text('token').primaryKey(),
   issuedAt: integer('issued_at').notNull(), // epoch ms

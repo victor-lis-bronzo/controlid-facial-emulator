@@ -237,6 +237,42 @@ const CREATE_TABLE_STATEMENTS: readonly string[] = [
     user_id TEXT NOT NULL,
     threshold TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS user_access_rules (
+    user_id INTEGER NOT NULL,
+    access_rule_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, access_rule_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS access_log_access_rules (
+    access_log_id INTEGER NOT NULL,
+    access_rule_id INTEGER NOT NULL,
+    PRIMARY KEY (access_log_id, access_rule_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS portal_actions (
+    portal_id INTEGER NOT NULL,
+    action_id INTEGER NOT NULL,
+    PRIMARY KEY (portal_id, action_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS alarm_zone_time_zones (
+    alarm_zone_id INTEGER NOT NULL,
+    time_zone_id INTEGER NOT NULL,
+    PRIMARY KEY (alarm_zone_id, time_zone_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS contingency_card_access_rules (
+    access_rule_id INTEGER PRIMARY KEY DEFAULT 1
+  )`,
+  `CREATE TABLE IF NOT EXISTS area_access_rules (
+    area_id INTEGER NOT NULL,
+    access_rule_id INTEGER NOT NULL,
+    PRIMARY KEY (area_id, access_rule_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS network_interlocking_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ip TEXT NOT NULL,
+    login TEXT NOT NULL,
+    password TEXT NOT NULL,
+    portal_name TEXT NOT NULL,
+    enabled TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     issued_at INTEGER NOT NULL,
