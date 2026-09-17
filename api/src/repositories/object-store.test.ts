@@ -1958,6 +1958,61 @@ describe('ObjectStore', () => {
       ).rejects.toThrowError(/nope/);
     });
   });
+
+  describe('group_access_rules (reuses the admin-panel access_rule_groups table)', () => {
+    it('returns an empty array when the store is empty', async () => {
+      const rows = await store.load('group_access_rules');
+      expect(rows).toEqual([]);
+    });
+
+    it('throws ValidationError naming an unrecognized filter parameter', async () => {
+      await expect(
+        store.load('group_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(ValidationError);
+      await expect(
+        store.load('group_access_rules', { not_a_column: 'x' }),
+      ).rejects.toThrowError(/not_a_column/);
+    });
+
+    it('creates, loads, modifies, and destroys group_access_rules', async () => {
+      const group1Id = Number(db.insert(groups).values({ name: 'G1' }).run().lastInsertRowid);
+      const group2Id = Number(db.insert(groups).values({ name: 'G2' }).run().lastInsertRowid);
+      const ruleId = Number(db.insert(accessRules).values({ name: 'R1' }).run().lastInsertRowid);
+
+      // create
+      const created = await store.create('group_access_rules', [
+        { group_id: String(group1Id), access_rule_id: String(ruleId) },
+      ]);
+      expect(created.ids).toHaveLength(1);
+
+      // load all
+      const all = await store.load('group_access_rules');
+      expect(all).toHaveLength(1);
+      expect(all[0]).toMatchObject({ group_id: String(group1Id), access_rule_id: String(ruleId) });
+
+      // modify — move the rule from group1 to group2
+      const modified = await store.modify(
+        'group_access_rules',
+        { group_id: String(group2Id) },
+        { group_id: String(group1Id), access_rule_id: String(ruleId) },
+      );
+      expect(modified.changes).toBe(1);
+      const afterModify = await store.load('group_access_rules', { group_id: String(group2Id) });
+      expect(afterModify).toHaveLength(1);
+
+      // destroy
+      const destroyed = await store.destroy('group_access_rules', { group_id: String(group2Id) });
+      expect(destroyed.changes).toBe(1);
+      const remaining = await store.load('group_access_rules');
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('throws ValidationError when creating with an unknown column', async () => {
+      await expect(
+        store.create('group_access_rules', [{ group_id: '1', access_rule_id: '1', nope: 'x' }]),
+      ).rejects.toThrowError(/nope/);
+    });
+  });
 });
 
 describe('UserRepository', () => {

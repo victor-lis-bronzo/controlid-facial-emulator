@@ -2009,6 +2009,83 @@ describe('ObjectStore.load — Property 10 (user_groups): filtered queries retur
   });
 });
 
+// Feature: controlid-facial-emulator, Property 10 (group_access_rules variant): for any set of group_access_rules associations (reusing the admin-panel access_rule_groups table) and any subset of valid filter parameters drawn from an existing record's own field values, load('group_access_rules', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
+describe('ObjectStore.load — Property 10 (group_access_rules): filtered queries return the exact matching subset', () => {
+  it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.uniqueArray(fc.tuple(fc.nat({ max: 5 }), fc.nat({ max: 5 })), {
+          selector: ([groupIdx, ruleIdx]) => `${groupIdx}${ruleIdx}`,
+          minLength: 1,
+          maxLength: 12,
+        }),
+        fc.nat(),
+        fc.boolean(),
+        async (pairs, pivotSeed, filterByGroup) => {
+          const db = createDb({ mode: 'ephemeral' });
+          try {
+            const store = new ObjectStore(db);
+
+            const groupIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              groupIds.push(Number(db.insert(groups).values({ name: `G${i}` }).run().lastInsertRowid));
+            }
+            const ruleIds: number[] = [];
+            for (let i = 0; i <= 5; i++) {
+              ruleIds.push(Number(db.insert(accessRules).values({ name: `R${i}` }).run().lastInsertRowid));
+            }
+
+            const records = pairs.map(([groupIdx, ruleIdx]) => ({
+              group_id: String(groupIds[groupIdx]),
+              access_rule_id: String(ruleIds[ruleIdx]),
+            }));
+            await store.create('group_access_rules', records);
+
+            const pivot = records[pivotSeed % records.length];
+            const field = filterByGroup ? 'group_id' : 'access_rule_id';
+            const filters: Record<string, string> = { [field]: pivot[field] };
+
+            const expected = records.filter((rec) => rec[field] === pivot[field]);
+
+            const loaded = await store.load('group_access_rules', filters);
+
+            const key = (r: Record<string, unknown>): string => `${r.group_id}${r.access_rule_id}`;
+
+            const expectedCounts = new Map<string, number>();
+            for (const r of expected) {
+              const k = key(r);
+              expectedCounts.set(k, (expectedCounts.get(k) ?? 0) + 1);
+            }
+            const loadedCounts = new Map<string, number>();
+            for (const r of loaded) {
+              const k = key(r);
+              loadedCounts.set(k, (loadedCounts.get(k) ?? 0) + 1);
+            }
+
+            if (loaded.length !== expected.length) {
+              return false;
+            }
+            for (const [k, count] of expectedCounts) {
+              if (loadedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            for (const [k, count] of loadedCounts) {
+              if (expectedCounts.get(k) !== count) {
+                return false;
+              }
+            }
+            return true;
+          } finally {
+            db.$client.close();
+          }
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
 // Feature: controlid-facial-emulator, Property 10 (portal_access_rules variant): for any set of portal_access_rules associations (reusing the admin-panel access_rule_portals table) and any subset of valid filter parameters drawn from an existing record's own field values, load('portal_access_rules', filters) returns exactly the records for which every supplied filter matches — none missing, none extra.
 describe('ObjectStore.load — Property 10 (portal_access_rules): filtered queries return the exact matching subset', () => {
   it('returns precisely the records matching every supplied filter (AND semantics)', async () => {
