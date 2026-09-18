@@ -36,10 +36,10 @@ The database uses SQLite and models device internal state with nine main tables:
 - `accessLogs`: Logs of biometric access events (event type, identifiers).
 - `sessions`: Token-based session management for `.fcgi` routes.
 - `interceptionLog`: Stores all inbound API requests and outbound webhook events.
-- `groups`: Named collections of users, used to compose access rules (admin panel).
-- `portals`: The doors / access points the device controls (admin panel).
-- `timeZones`: Named weekly schedules built from time ranges (admin panel).
-- `accessRules`: Compositions associating Groups, Time Zones, and Portals (admin panel).
+- `groups`: Named collections of users, used to compose access rules (backs `/api/admin/groups`; no WebGUI section yet).
+- `portals`: The doors / access points the device controls (backs `/api/admin/portals`; no WebGUI section yet).
+- `timeZones`: Named weekly schedules built from time ranges (backs `/api/admin/time-zones`; no WebGUI section yet).
+- `accessRules`: Compositions associating Groups, Time Zones, and Portals (backs `/api/admin/access-rules`; no WebGUI section yet).
 
 The official Access API documents ~40 object types in total; only 6 of them
 (`users`, `groups`, `portals`, `time_zones`, `access_rules`, `access_logs`)
@@ -73,16 +73,16 @@ Outbound webhooks (Monitor mechanism) are dispatched to a configured push target
 - `api/src/services/push-engine.ts` (PushEngine dispatch and retry logic)
 - `README.md` (Lines 151-170)
 
-### 5. Control Panel & Interception Logger
-The web control panel at `/admin` (React SPA) allows developers to:
-- Simulate access events (Authorized, Denied, Keep-alive).
-- Inspect an interception log containing all incoming requests and outbound webhooks in real-time.
-This relies on a specific set of API endpoints (`/api/identities`, `/api/simulate/*`, `/api/interception`).
+### 5. Control-Panel API & Interception Logger
+The backend exposes a control-panel API (`/api/identities`, `/api/simulate/*`,
+`/api/interception`) to simulate access events (Authorized, Denied, Keep-alive) and inspect
+the interception log of inbound requests and outbound webhooks. These endpoints are called
+directly (e.g. via `curl`) today — the WebGUI does not currently expose a UI for them; see
+[WebGUI](../README.md#webgui) in the README.
 
 **Sources:**
 - `api/src/routes/control-panel/control-panel-routes.ts`
 - `api/src/services/interception-logger.ts`
-- `web/src/components/` (EventControls, InterceptionLog)
 
 ### 6. Packaging & Deployment
 The repository is packaged into a single, multi-stage Docker image using `node:22-alpine`.

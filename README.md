@@ -145,18 +145,25 @@ from the Control-iD compatibility surface above.
 
 ## Simulating events
 
-Open the control panel at <http://localhost:8080/admin>. It provides three controls:
+The `/api/simulate/*` endpoints trigger simulated access events directly (there is
+currently no panel UI for this — see [WebGUI](#webgui) below):
 
-- **Authorized access** — pick an identity (the selector lists the enrolled users), then
-  trigger the event. The emulator dispatches an authorized-identification webhook
+```bash
+curl -X POST localhost:8080/api/simulate/authorized -H 'content-type: application/json' -d '{"identityId":1}'
+curl -X POST localhost:8080/api/simulate/denied
+curl -X POST localhost:8080/api/simulate/keep-alive
+```
+
+- **Authorized access** — pick an identity (`/api/identities` lists the enrolled users),
+  then trigger the event. The emulator dispatches an authorized-identification webhook
   (`event=7`) that includes the selected identity.
 - **Denied access** — dispatches a denied-identification webhook (`event=6`).
 - **Keep-alive** — dispatches a `device_is_alive` keep-alive webhook.
 
 Each action runs through the **Push/webhook engine**, which reads the configured push
 target and POSTs the grounded payload to it. Every inbound request and every outbound
-webhook (with its dispatch outcome) appears in the interception log, newest-first, with an
-explicit empty state when there is nothing recorded yet.
+webhook (with its dispatch outcome) is recorded in the interception log
+(`/api/interception`, newest-first).
 
 ### Configuring the push target
 
@@ -176,37 +183,36 @@ is recorded in the interception log as `no_target` and no POST is made.
 
 ---
 
-## Admin panel
+## WebGUI
 
-The control panel at <http://localhost:8080/admin> is a single-page application that, in
-addition to the **Simulate** and **Interception Log** capabilities described above, provides
-a full device-style administration experience modeled on the Control-iD / iDSecure device
-admin UI. Navigate between sections in the panel without a page reload:
+The web app at <http://localhost:8080/admin> is a from-scratch rewrite that mirrors the
+Control-iD device's own admin UI, built exclusively against the `.fcgi` compatibility
+surface above (no separate control-panel API). Today it covers:
 
-- **Dashboard** — aggregate counts of Users, Groups, Access Rules, and Portals plus the 10
-  most recent access-log records.
-- **Users** — create, edit, and delete users (registration, name, optional PIN, group
-  membership) and upload/remove a **facial photo** shown as the user's avatar.
-- **Groups** — named collections of users, used to compose access rules.
-- **Time Zones** — named weekly schedules (Portuguese *horários*) built from time ranges
-  (weekdays + `HH:MM`–`HH:MM`).
-- **Access Rules** — compositions that associate one or more Groups, Time Zones, and Portals.
-- **Portals** — the doors / access points the device controls.
-- **Access Logs** — a filterable, newest-first view of access events (by user, event type,
-  and date range).
-- **Simulate** and **Interception Log** — the existing capabilities, preserved unchanged.
+- **Login** — authenticates via `login.fcgi` and gates the rest of the panel behind the
+  session.
+- **Users** — create, edit, and delete users, and upload/remove a **facial photo** (via
+  `user_set_image.fcgi` / `user_destroy_image.fcgi`) shown as the user's avatar.
+
+Groups, Time Zones, Access Rules, Portals, and a Dashboard are planned as `.fcgi`-native
+additions to this WebGUI; they are not implemented yet. An earlier, separate admin
+interface (its own REST API under `/api/admin/*` plus Simulate/Interception-Log controls)
+was built first, then superseded by this rewrite; its now-unused frontend code has been
+removed. The `/api/admin/*` backend routes described below remain available as a REST
+surface distinct from `.fcgi`, but nothing in the WebGUI calls them today.
 
 ### Creating a user (and using it in Simulate)
 
 Create a user from the **Users** section (or via the API below). Once created, the user
-immediately appears in the **Simulate** section's identity picker for authorized-access
-events, and you can attach a facial photo to it. The stored photo is served back through the
-existing `user_get_image.fcgi` endpoint and rendered as the user's avatar.
+immediately appears in the `/api/identities` list used by
+[Simulating events](#simulating-events), and you can attach a facial photo to it. The
+stored photo is served back through the existing `user_get_image.fcgi` endpoint and
+rendered as the user's avatar.
 
 ### Admin API (`/api/admin/...`)
 
-The panel is backed by the emulator's own REST admin surface under `/api/admin` (distinct
-from the Control-iD `.fcgi` compatibility surface). **Reads are open; every mutation
+A REST surface under `/api/admin`, distinct from the Control-iD `.fcgi` compatibility
+surface and not currently consumed by the WebGUI. **Reads are open; every mutation
 (create/update/delete and photo upload/delete) requires a valid session token** obtained from
 `POST /login.fcgi` and passed as `?session=<token>` (the same session mechanism the `.fcgi`
 routes use; token TTL is 3600 seconds). A missing/expired/invalid session on a mutation
