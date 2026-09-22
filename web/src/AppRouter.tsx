@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { UsersPage } from './pages/UsersPage.tsx';
 import { GroupsPage } from './pages/GroupsPage.tsx';
+import { TimeZonesPage } from './pages/TimeZonesPage.tsx';
 import { ProtectedRoute } from './components/ProtectedRoute.tsx';
 import { WebGuiLayout } from './components/WebGuiLayout.tsx';
 import { useAuth } from './context/AuthContext.tsx';
@@ -31,6 +32,16 @@ export function AppRouter() {
           <ProtectedRoute>
             <WebGuiLayout>
               <GroupsPage />
+            </WebGuiLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/time-zones"
+        element={
+          <ProtectedRoute>
+            <WebGuiLayout>
+              <TimeZonesPage />
             </WebGuiLayout>
           </ProtectedRoute>
         }

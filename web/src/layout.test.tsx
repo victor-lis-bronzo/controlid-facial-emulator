@@ -49,13 +49,16 @@ describe('WebGuiLayout (Issue #23)', () => {
     expect(groupsLink).toBeInTheDocument();
     expect(groupsLink).toHaveAttribute('href', '/admin/groups');
 
-    expect(screen.getByText('Horários')).toBeInTheDocument();
+    const timeZonesLink = screen.getByRole('link', { name: /horários/i });
+    expect(timeZonesLink).toBeInTheDocument();
+    expect(timeZonesLink).toHaveAttribute('href', '/admin/time-zones');
+
     expect(screen.getByText('Regras de Acesso')).toBeInTheDocument();
     expect(screen.getByText('Logs de Acesso')).toBeInTheDocument();
     expect(screen.getByText('Configurações')).toBeInTheDocument();
 
     const comingSoonBadges = screen.getAllByText('Em breve');
-    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(4);
+    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(3);
   });
 
   it('triggers logout when Sair button is clicked', async () => {
