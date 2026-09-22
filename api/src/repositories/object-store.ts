@@ -35,6 +35,7 @@ import type { SQL } from 'drizzle-orm';
 import type { DrizzleDb } from '../db/connection.js';
 import {
   users,
+  portals,
   accessLogs,
   changeLogs,
   templates,
@@ -113,6 +114,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
       name: { column: users.name, schemaKey: 'name', numeric: false },
       password: { column: users.password, schemaKey: 'password', numeric: false },
       image_path: { column: users.imagePath, schemaKey: 'imagePath', numeric: false },
+    },
+  },
+  portals: {
+    table: portals,
+    columns: {
+      id: { column: portals.id, schemaKey: 'id', numeric: true },
+      name: { column: portals.name, schemaKey: 'name', numeric: false },
     },
   },
   access_logs: {

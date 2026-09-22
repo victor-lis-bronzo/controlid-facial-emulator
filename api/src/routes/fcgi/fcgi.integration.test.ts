@@ -553,6 +553,59 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     expect(finalLoad.json()).toEqual({ user_groups: [] });
   });
 
+  it('portals: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'portals', values: [{ name: 'P1' }] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+    const portalId = created.ids[0];
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'portals' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { portals: Record<string, unknown>[] };
+    expect(loaded.portals.length).toBe(1);
+    expect(loaded.portals[0].name).toBe('P1');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'portals', values: { name: 'P2' }, where: { id: portalId } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'portals', where: { id: portalId } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'portals' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad.json()).toEqual({ portals: [] });
+  });
+
   it('time_zones: full create → load → modify → destroy cycle', async () => {
     harness = await buildTestApp();
     const token = await login(harness.app);
