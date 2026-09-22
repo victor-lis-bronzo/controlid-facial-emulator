@@ -36,6 +36,7 @@ import type { DrizzleDb } from '../db/connection.js';
 import {
   users,
   portals,
+  accessRules,
   accessLogs,
   changeLogs,
   templates,
@@ -121,6 +122,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       id: { column: portals.id, schemaKey: 'id', numeric: true },
       name: { column: portals.name, schemaKey: 'name', numeric: false },
+    },
+  },
+  access_rules: {
+    table: accessRules,
+    columns: {
+      id: { column: accessRules.id, schemaKey: 'id', numeric: true },
+      name: { column: accessRules.name, schemaKey: 'name', numeric: false },
     },
   },
   access_logs: {

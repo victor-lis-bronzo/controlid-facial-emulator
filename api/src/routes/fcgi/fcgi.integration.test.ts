@@ -553,6 +553,156 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     expect(finalLoad.json()).toEqual({ user_groups: [] });
   });
 
+  it('access_rules: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rules', values: [{ name: 'R1' }] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+    const ruleId = created.ids[0];
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rules' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { access_rules: Record<string, unknown>[] };
+    expect(loaded.access_rules.length).toBe(1);
+    expect(loaded.access_rules[0].name).toBe('R1');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rules', values: { name: 'R2' }, where: { id: ruleId } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rules', where: { id: ruleId } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rules' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad.json()).toEqual({ access_rules: [] });
+  });
+
+  it('access_rules: destroying a rule cascades its group_access_rules/access_rule_time_zones/portal_access_rules rows', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const ruleCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rules', values: [{ name: 'R1' }] },
+      headers: jsonHeaders(),
+    });
+    const ruleId = (ruleCreate.json() as { ids: number[] }).ids[0];
+
+    const groupResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/groups?session=${token}`,
+      payload: { name: 'G1' },
+      headers: jsonHeaders(),
+    });
+    const groupId = (groupResponse.json() as { id: number }).id;
+
+    const portalResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/portals?session=${token}`,
+      payload: { name: 'P1' },
+      headers: jsonHeaders(),
+    });
+    const portalId = (portalResponse.json() as { id: number }).id;
+
+    const timeZoneResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/time-zones?session=${token}`,
+      payload: { name: 'TZ1', timeRanges: [{ days: ['mon'], startTime: '09:00', endTime: '17:00' }] },
+      headers: jsonHeaders(),
+    });
+    const timeZoneId = (timeZoneResponse.json() as { id: number }).id;
+
+    await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'group_access_rules',
+        values: [{ group_id: String(groupId), access_rule_id: String(ruleId) }],
+      },
+      headers: jsonHeaders(),
+    });
+    await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'access_rule_time_zones',
+        values: [{ access_rule_id: String(ruleId), time_zone_id: String(timeZoneId) }],
+      },
+      headers: jsonHeaders(),
+    });
+    await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'portal_access_rules',
+        values: [{ portal_id: String(portalId), access_rule_id: String(ruleId) }],
+      },
+      headers: jsonHeaders(),
+    });
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rules', where: { id: ruleId } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+
+    const groupRulesLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'group_access_rules', where: { access_rule_id: String(ruleId) } },
+      headers: jsonHeaders(),
+    });
+    expect(groupRulesLoad.json()).toEqual({ group_access_rules: [] });
+
+    const timeZoneRulesLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'access_rule_time_zones', where: { access_rule_id: String(ruleId) } },
+      headers: jsonHeaders(),
+    });
+    expect(timeZoneRulesLoad.json()).toEqual({ access_rule_time_zones: [] });
+
+    const portalRulesLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'portal_access_rules', where: { access_rule_id: String(ruleId) } },
+      headers: jsonHeaders(),
+    });
+    expect(portalRulesLoad.json()).toEqual({ portal_access_rules: [] });
+  });
+
   it('portals: full create → load → modify → destroy cycle', async () => {
     harness = await buildTestApp();
     const token = await login(harness.app);
