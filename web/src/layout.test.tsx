@@ -53,6 +53,10 @@ describe('WebGuiLayout (Issue #23)', () => {
     expect(timeZonesLink).toBeInTheDocument();
     expect(timeZonesLink).toHaveAttribute('href', '/admin/time-zones');
 
+    const portalsLink = screen.getByRole('link', { name: /portais/i });
+    expect(portalsLink).toBeInTheDocument();
+    expect(portalsLink).toHaveAttribute('href', '/admin/portals');
+
     expect(screen.getByText('Regras de Acesso')).toBeInTheDocument();
     expect(screen.getByText('Logs de Acesso')).toBeInTheDocument();
     expect(screen.getByText('Configurações')).toBeInTheDocument();

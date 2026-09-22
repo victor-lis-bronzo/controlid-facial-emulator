@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage.tsx';
 import { UsersPage } from './pages/UsersPage.tsx';
 import { GroupsPage } from './pages/GroupsPage.tsx';
 import { TimeZonesPage } from './pages/TimeZonesPage.tsx';
+import { PortalsPage } from './pages/PortalsPage.tsx';
 import { ProtectedRoute } from './components/ProtectedRoute.tsx';
 import { WebGuiLayout } from './components/WebGuiLayout.tsx';
 import { useAuth } from './context/AuthContext.tsx';
@@ -42,6 +43,16 @@ export function AppRouter() {
           <ProtectedRoute>
             <WebGuiLayout>
               <TimeZonesPage />
+            </WebGuiLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/portals"
+        element={
+          <ProtectedRoute>
+            <WebGuiLayout>
+              <PortalsPage />
             </WebGuiLayout>
           </ProtectedRoute>
         }
