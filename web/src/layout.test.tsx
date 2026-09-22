@@ -45,14 +45,17 @@ describe('WebGuiLayout (Issue #23)', () => {
     expect(usersLink).toHaveAttribute('href', '/admin/users');
     expect(usersLink).toHaveAttribute('aria-current', 'page');
 
-    expect(screen.getByText('Grupos')).toBeInTheDocument();
+    const groupsLink = screen.getByRole('link', { name: /grupos/i });
+    expect(groupsLink).toBeInTheDocument();
+    expect(groupsLink).toHaveAttribute('href', '/admin/groups');
+
     expect(screen.getByText('Horários')).toBeInTheDocument();
     expect(screen.getByText('Regras de Acesso')).toBeInTheDocument();
     expect(screen.getByText('Logs de Acesso')).toBeInTheDocument();
     expect(screen.getByText('Configurações')).toBeInTheDocument();
 
     const comingSoonBadges = screen.getAllByText('Em breve');
-    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(5);
+    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(4);
   });
 
   it('triggers logout when Sair button is clicked', async () => {

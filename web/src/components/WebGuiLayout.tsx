@@ -14,7 +14,7 @@ interface NavModule {
 
 const NAV_MODULES: NavModule[] = [
   { name: 'Usuários', path: '/admin/users', enabled: true },
-  { name: 'Grupos', enabled: false },
+  { name: 'Grupos', path: '/admin/groups', enabled: true },
   { name: 'Horários', enabled: false },
   { name: 'Regras de Acesso', enabled: false },
   { name: 'Logs de Acesso', enabled: false },
