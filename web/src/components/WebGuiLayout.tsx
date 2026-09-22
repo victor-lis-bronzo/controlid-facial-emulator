@@ -17,7 +17,7 @@ const NAV_MODULES: NavModule[] = [
   { name: 'Grupos', path: '/admin/groups', enabled: true },
   { name: 'Horários', path: '/admin/time-zones', enabled: true },
   { name: 'Portais', path: '/admin/portals', enabled: true },
-  { name: 'Regras de Acesso', enabled: false },
+  { name: 'Regras de Acesso', path: '/admin/access-rules', enabled: true },
   { name: 'Logs de Acesso', enabled: false },
   { name: 'Configurações', enabled: false },
 ];

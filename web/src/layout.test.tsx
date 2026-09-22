@@ -57,12 +57,15 @@ describe('WebGuiLayout (Issue #23)', () => {
     expect(portalsLink).toBeInTheDocument();
     expect(portalsLink).toHaveAttribute('href', '/admin/portals');
 
-    expect(screen.getByText('Regras de Acesso')).toBeInTheDocument();
+    const accessRulesLink = screen.getByRole('link', { name: /regras de acesso/i });
+    expect(accessRulesLink).toBeInTheDocument();
+    expect(accessRulesLink).toHaveAttribute('href', '/admin/access-rules');
+
     expect(screen.getByText('Logs de Acesso')).toBeInTheDocument();
     expect(screen.getByText('Configurações')).toBeInTheDocument();
 
     const comingSoonBadges = screen.getAllByText('Em breve');
-    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(3);
+    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(2);
   });
 
   it('triggers logout when Sair button is clicked', async () => {
