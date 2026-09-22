@@ -720,12 +720,24 @@ export class ObjectStore {
     const conditions = this.buildConditions(whereCols, where);
     const whereClause = conditions.length === 0 ? undefined : and(...conditions);
 
-    const result = this.db
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .delete(def.table as any)
-      .where(whereClause)
-      .run();
+    try {
+      const result = this.db
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .delete(def.table as any)
+        .where(whereClause)
+        .run();
 
-    return { changes: result.changes };
+      return { changes: result.changes };
+    } catch (error) {
+      const code =
+        error instanceof Error ? (error as Error & { code?: unknown }).code : undefined;
+      if (typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT')) {
+        throw new ValidationError(
+          `Cannot delete ${object}: still referenced by another object`,
+          object,
+        );
+      }
+      throw error;
+    }
   }
 }

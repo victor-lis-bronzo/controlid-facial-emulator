@@ -1918,6 +1918,62 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     expect(body['error-description']).toBeDefined();
   });
 
+  it('groups: destroying a group still referenced by an access rule (group_access_rules) → 400, not 500, and the group is left intact', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const groupResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/groups?session=${token}`,
+      payload: { name: 'G1' },
+      headers: jsonHeaders(),
+    });
+    const groupId = (groupResponse.json() as { id: number }).id;
+
+    const portalResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/portals?session=${token}`,
+      payload: { name: 'P1' },
+      headers: jsonHeaders(),
+    });
+    const portalId = (portalResponse.json() as { id: number }).id;
+
+    const timeZoneResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/time-zones?session=${token}`,
+      payload: { name: 'TZ1', timeRanges: [{ days: ['mon'], startTime: '09:00', endTime: '17:00' }] },
+      headers: jsonHeaders(),
+    });
+    const timeZoneId = (timeZoneResponse.json() as { id: number }).id;
+
+    const ruleResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/api/admin/access-rules?session=${token}`,
+      payload: { name: 'R1', groupIds: [groupId], timeZoneIds: [timeZoneId], portalIds: [portalId] },
+      headers: jsonHeaders(),
+    });
+    expect(ruleResponse.statusCode).toBe(201);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', where: { id: groupId } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(400);
+    const body = destroyResponse.json() as Record<string, string>;
+    expect(body['error-description']).toBeDefined();
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', where: { id: groupId } },
+      headers: jsonHeaders(),
+    });
+    const loaded = finalLoad.json() as { groups: Record<string, unknown>[] };
+    expect(loaded.groups).toHaveLength(1);
+  });
+
   it('portal_access_rules: full create → load → modify → destroy cycle (reuses access_rule_portals)', async () => {
     harness = await buildTestApp();
     const token = await login(harness.app);

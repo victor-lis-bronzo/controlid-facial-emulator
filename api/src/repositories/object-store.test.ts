@@ -2012,6 +2012,19 @@ describe('ObjectStore', () => {
         store.create('group_access_rules', [{ group_id: '1', access_rule_id: '1', nope: 'x' }]),
       ).rejects.toThrowError(/nope/);
     });
+
+    it('destroying a group still referenced by group_access_rules throws ValidationError (400), not a raw 500', async () => {
+      const groupId = Number(db.insert(groups).values({ name: 'G1' }).run().lastInsertRowid);
+      const ruleId = Number(db.insert(accessRules).values({ name: 'R1' }).run().lastInsertRowid);
+      await store.create('group_access_rules', [
+        { group_id: String(groupId), access_rule_id: String(ruleId) },
+      ]);
+
+      await expect(store.destroy('groups', { id: groupId })).rejects.toThrowError(ValidationError);
+
+      const remainingGroups = await store.load('groups', { id: groupId });
+      expect(remainingGroups).toHaveLength(1);
+    });
   });
 
   describe('access_rule_time_zones (reuses the admin-panel access_rule_time_zones table)', () => {
