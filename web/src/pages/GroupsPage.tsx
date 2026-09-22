@@ -23,6 +23,15 @@ interface LoadUserGroupsResponse {
   user_groups?: UserGroupRow[];
 }
 
+interface UserRow {
+  id: number;
+  name: string;
+}
+
+interface LoadUsersResponse {
+  users?: UserRow[];
+}
+
 interface GroupFormData {
   name: string;
 }
@@ -45,6 +54,11 @@ export function GroupsPage() {
   const [editingGroup, setEditingGroup] = useState<GroupItem | null>(null);
   const [editFormData, setEditFormData] = useState<GroupFormData>(INITIAL_FORM_DATA);
   const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  const [allUsers, setAllUsers] = useState<UserRow[]>([]);
+  const [originalMemberIds, setOriginalMemberIds] = useState<Set<number>>(new Set());
+  const [checkedUserIds, setCheckedUserIds] = useState<Set<number>>(new Set());
+  const [loadingMembership, setLoadingMembership] = useState(false);
 
   const [deletingGroup, setDeletingGroup] = useState<GroupItem | null>(null);
   const [submittingDelete, setSubmittingDelete] = useState(false);
@@ -118,9 +132,44 @@ export function GroupsPage() {
     }
   };
 
-  const handleOpenEdit = (group: GroupItem) => {
+  const handleOpenEdit = async (group: GroupItem) => {
     setEditingGroup(group);
     setEditFormData({ name: group.name });
+    setLoadingMembership(true);
+    setError(null);
+    try {
+      const [usersData, membershipData] = await Promise.all([
+        fcgiFetch<LoadUsersResponse>('/load_objects.fcgi?object=users', {
+          method: 'POST',
+          body: JSON.stringify({ object: 'users' }),
+        }),
+        fcgiFetch<LoadUserGroupsResponse>('/load_objects.fcgi?object=user_groups', {
+          method: 'POST',
+          body: JSON.stringify({ object: 'user_groups', where: { group_id: group.id } }),
+        }),
+      ]);
+
+      setAllUsers(usersData.users || []);
+      const memberIds = new Set((membershipData.user_groups || []).map((row) => row.user_id));
+      setOriginalMemberIds(memberIds);
+      setCheckedUserIds(new Set(memberIds));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar membros do grupo');
+    } finally {
+      setLoadingMembership(false);
+    }
+  };
+
+  const toggleMember = (userId: number) => {
+    setCheckedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
   };
 
   const handleEditGroup = async (e: React.FormEvent) => {
@@ -145,9 +194,48 @@ export function GroupsPage() {
         });
       }
 
+      const toAdd = [...checkedUserIds].filter((id) => !originalMemberIds.has(id));
+      const toRemove = [...originalMemberIds].filter((id) => !checkedUserIds.has(id));
+
+      let membershipErrorMessage: string | null = null;
+      try {
+        await Promise.all([
+          ...toAdd.map((userId) =>
+            fcgiFetch('/create_objects.fcgi?object=user_groups', {
+              method: 'POST',
+              body: JSON.stringify({
+                object: 'user_groups',
+                values: [{ user_id: userId, group_id: editingGroup.id }],
+              }),
+            })
+          ),
+          ...toRemove.map((userId) =>
+            fcgiFetch('/destroy_objects.fcgi?object=user_groups', {
+              method: 'POST',
+              body: JSON.stringify({
+                object: 'user_groups',
+                where: { user_id: userId, group_id: editingGroup.id },
+              }),
+            })
+          ),
+        ]);
+      } catch (membershipErr) {
+        const message =
+          membershipErr instanceof Error ? membershipErr.message : 'Erro ao atualizar membros';
+        membershipErrorMessage = message.toLowerCase().includes('duplicate')
+          ? 'Alguns membros já estavam associados a este grupo; a lista foi recarregada.'
+          : message;
+      }
+
       setEditingGroup(null);
       setEditFormData(INITIAL_FORM_DATA);
+      setAllUsers([]);
+      setOriginalMemberIds(new Set());
+      setCheckedUserIds(new Set());
       await loadGroups();
+      if (membershipErrorMessage) {
+        setError(membershipErrorMessage);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar grupo');
     } finally {
@@ -310,7 +398,7 @@ export function GroupsPage() {
       {/* Modal edit group */}
       {editingGroup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white">Editar Grupo</h3>
               <button
@@ -338,6 +426,34 @@ export function GroupsPage() {
                   placeholder="Ex: Administradores"
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
+              </div>
+
+              <div>
+                <span className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+                  Membros
+                </span>
+                {loadingMembership ? (
+                  <p className="text-xs text-slate-400 p-2">Carregando membros...</p>
+                ) : allUsers.length === 0 ? (
+                  <p className="text-xs text-slate-400 p-2">Nenhum usuário cadastrado.</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 p-2 space-y-1">
+                    {allUsers.map((user) => (
+                      <label
+                        key={user.id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-700/50 text-sm text-slate-200 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checkedUserIds.has(user.id)}
+                          onChange={() => toggleMember(user.id)}
+                          className="rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                        />
+                        {user.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
