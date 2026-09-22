@@ -614,14 +614,28 @@ export class ObjectStore {
     for (const value of values) {
       const resolved = this.resolveColumns(def, value, 'value');
       const insertValues = this.toSchemaValues(resolved, value);
-      const result = this.db
-        // Drizzle's generic insert type cannot be expressed over the dynamic
-        // registry; the values are validated/translated above.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .insert(def.table as any)
-        .values(insertValues)
-        .run();
-      ids.push(Number(result.lastInsertRowid));
+      try {
+        const result = this.db
+          // Drizzle's generic insert type cannot be expressed over the dynamic
+          // registry; the values are validated/translated above.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .insert(def.table as any)
+          .values(insertValues)
+          .run();
+        ids.push(Number(result.lastInsertRowid));
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          typeof (error as { code?: unknown }).code === 'string' &&
+          (error as { code: string }).code.startsWith('SQLITE_CONSTRAINT')
+        ) {
+          throw new ValidationError(
+            `Duplicate or invalid ${object} entry: ${JSON.stringify(value)}`,
+            object,
+          );
+        }
+        throw error;
+      }
     }
 
     return { ids };

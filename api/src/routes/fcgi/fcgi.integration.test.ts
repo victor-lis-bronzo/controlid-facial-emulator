@@ -1710,6 +1710,51 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     expect(finalLoad22.json()).toEqual({ user_groups: [] });
   });
 
+  it('user_groups: duplicate (user_id, group_id) create → 400, not 500', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const userCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'users', values: [{ registration: '1', name: 'A' }] },
+      headers: jsonHeaders(),
+    });
+    const userId = (userCreate.json() as { ids: number[] }).ids[0];
+
+    const groupCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', values: [{ name: 'G1' }] },
+      headers: jsonHeaders(),
+    });
+    const groupId = (groupCreate.json() as { ids: number[] }).ids[0];
+
+    const firstCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'user_groups',
+        values: [{ user_id: String(userId), group_id: String(groupId) }],
+      },
+      headers: jsonHeaders(),
+    });
+    expect(firstCreate.statusCode).toBe(200);
+
+    const duplicateCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'user_groups',
+        values: [{ user_id: String(userId), group_id: String(groupId) }],
+      },
+      headers: jsonHeaders(),
+    });
+    expect(duplicateCreate.statusCode).toBe(400);
+    const body = duplicateCreate.json() as Record<string, string>;
+    expect(body['error-description']).toBeDefined();
+  });
+
   it('portal_access_rules: full create → load → modify → destroy cycle (reuses access_rule_portals)', async () => {
     harness = await buildTestApp();
     const token = await login(harness.app);
