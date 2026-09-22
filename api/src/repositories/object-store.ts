@@ -48,6 +48,7 @@ import {
   actions,
   areas,
   groups,
+  timeZones,
   timeSpans,
   contingencyCards,
   holidays,
@@ -231,6 +232,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       id: { column: groups.id, schemaKey: 'id', numeric: true },
       name: { column: groups.name, schemaKey: 'name', numeric: false },
+    },
+  },
+  time_zones: {
+    table: timeZones,
+    columns: {
+      id: { column: timeZones.id, schemaKey: 'id', numeric: true },
+      name: { column: timeZones.name, schemaKey: 'name', numeric: false },
     },
   },
   time_spans: {

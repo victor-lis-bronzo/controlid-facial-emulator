@@ -553,6 +553,116 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     expect(finalLoad.json()).toEqual({ user_groups: [] });
   });
 
+  it('time_zones: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'time_zones', values: [{ name: 'TZ1' }] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+    const timeZoneId = created.ids[0];
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'time_zones' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { time_zones: Record<string, unknown>[] };
+    expect(loaded.time_zones.length).toBe(1);
+    expect(loaded.time_zones[0].name).toBe('TZ1');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'time_zones', values: { name: 'TZ2' }, where: { id: timeZoneId } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'time_zones', where: { id: timeZoneId } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'time_zones' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad.json()).toEqual({ time_zones: [] });
+  });
+
+  it('time_zones: destroying a time zone leaves its time_spans rows in place (no cascade, no guard)', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const timeZoneCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'time_zones', values: [{ name: 'TZ1' }] },
+      headers: jsonHeaders(),
+    });
+    const timeZoneId = (timeZoneCreate.json() as { ids: number[] }).ids[0];
+
+    await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'time_spans',
+        values: [
+          {
+            time_zone_id: String(timeZoneId),
+            start: '0',
+            end: '3600',
+            sun: '1',
+            mon: '1',
+            tue: '1',
+            wed: '1',
+            thu: '1',
+            fri: '1',
+            sat: '1',
+            hol1: '0',
+            hol2: '0',
+            hol3: '0',
+          },
+        ],
+      },
+      headers: jsonHeaders(),
+    });
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'time_zones', where: { id: timeZoneId } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'time_spans', where: { time_zone_id: String(timeZoneId) } },
+      headers: jsonHeaders(),
+    });
+    const loaded = finalLoad.json() as { time_spans: Record<string, unknown>[] };
+    expect(loaded.time_spans.length).toBe(1);
+  });
+
   it('qrcodes: full create → load → modify → destroy cycle', async () => {
     harness = await buildTestApp();
     const token = await login(harness.app);
