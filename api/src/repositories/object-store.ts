@@ -47,6 +47,7 @@ import {
   scheduledUnlocks,
   actions,
   areas,
+  groups,
   timeSpans,
   contingencyCards,
   holidays,
@@ -223,6 +224,13 @@ const OBJECT_REGISTRY: Record<string, ObjectDefinition> = {
     columns: {
       id: { column: areas.id, schemaKey: 'id', numeric: true },
       name: { column: areas.name, schemaKey: 'name', numeric: false },
+    },
+  },
+  groups: {
+    table: groups,
+    columns: {
+      id: { column: groups.id, schemaKey: 'id', numeric: true },
+      name: { column: groups.name, schemaKey: 'name', numeric: false },
     },
   },
   time_spans: {

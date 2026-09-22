@@ -454,6 +454,105 @@ describe('objects / logs (Req 4.1, 4.2, 4.5)', () => {
     expect(finalLoad.json()).toEqual({ cards: [] });
   });
 
+  it('groups: full create → load → modify → destroy cycle', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const createResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', values: [{ name: 'G1' }] },
+      headers: jsonHeaders(),
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const created = createResponse.json() as { ids: number[] };
+    expect(created.ids.length).toBe(1);
+    const groupId = created.ids[0];
+
+    const loadResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'groups' },
+      headers: jsonHeaders(),
+    });
+    expect(loadResponse.statusCode).toBe(200);
+    const loaded = loadResponse.json() as { groups: Record<string, unknown>[] };
+    expect(loaded.groups.length).toBe(1);
+    expect(loaded.groups[0].name).toBe('G1');
+
+    const modifyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/modify_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', values: { name: 'G2' }, where: { id: groupId } },
+      headers: jsonHeaders(),
+    });
+    expect(modifyResponse.statusCode).toBe(200);
+    expect((modifyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const destroyResponse = await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', where: { id: groupId } },
+      headers: jsonHeaders(),
+    });
+    expect(destroyResponse.statusCode).toBe(200);
+    expect((destroyResponse.json() as { changes: number }).changes).toBe(1);
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'groups' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad.json()).toEqual({ groups: [] });
+  });
+
+  it('groups: destroying a group cascades its user_groups rows', async () => {
+    harness = await buildTestApp();
+    const token = await login(harness.app);
+
+    const userCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'users', values: [{ registration: '1', name: 'A' }] },
+      headers: jsonHeaders(),
+    });
+    const userId = (userCreate.json() as { ids: number[] }).ids[0];
+
+    const groupCreate = await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', values: [{ name: 'G1' }] },
+      headers: jsonHeaders(),
+    });
+    const groupId = (groupCreate.json() as { ids: number[] }).ids[0];
+
+    await harness.app.inject({
+      method: 'POST',
+      url: `/create_objects.fcgi?session=${token}`,
+      payload: {
+        object: 'user_groups',
+        values: [{ user_id: String(userId), group_id: String(groupId) }],
+      },
+      headers: jsonHeaders(),
+    });
+
+    await harness.app.inject({
+      method: 'POST',
+      url: `/destroy_objects.fcgi?session=${token}`,
+      payload: { object: 'groups', where: { id: groupId } },
+      headers: jsonHeaders(),
+    });
+
+    const finalLoad = await harness.app.inject({
+      method: 'POST',
+      url: `/load_objects.fcgi?session=${token}`,
+      payload: { object: 'user_groups' },
+      headers: jsonHeaders(),
+    });
+    expect(finalLoad.json()).toEqual({ user_groups: [] });
+  });
+
   it('qrcodes: full create → load → modify → destroy cycle', async () => {
     harness = await buildTestApp();
     const token = await login(harness.app);
