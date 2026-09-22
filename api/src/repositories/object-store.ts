@@ -624,11 +624,9 @@ export class ObjectStore {
           .run();
         ids.push(Number(result.lastInsertRowid));
       } catch (error) {
-        if (
-          error instanceof Error &&
-          typeof (error as { code?: unknown }).code === 'string' &&
-          (error as { code: string }).code.startsWith('SQLITE_CONSTRAINT')
-        ) {
+        const code =
+          error instanceof Error ? (error as Error & { code?: unknown }).code : undefined;
+        if (typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT')) {
           throw new ValidationError(
             `Duplicate or invalid ${object} entry: ${JSON.stringify(value)}`,
             object,
