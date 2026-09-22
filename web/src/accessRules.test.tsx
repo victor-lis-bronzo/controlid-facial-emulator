@@ -129,6 +129,27 @@ describe('Access Rules CRUD via .fcgi', () => {
       if (urlString.includes('/load_objects.fcgi?object=access_rules')) {
         return ok(200, { access_rules: rulesList });
       }
+      // The edit modal always loads the three association checklists too —
+      // return one entry each, already associated, so the "at least one
+      // checked per checklist" guard doesn't block this name-only edit.
+      if (urlString.includes('/load_objects.fcgi?object=groups')) {
+        return ok(200, { groups: [{ id: 10, name: 'Administradores' }] });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=time_zones')) {
+        return ok(200, { time_zones: [{ id: 30, name: 'Comercial' }] });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=portals')) {
+        return ok(200, { portals: [{ id: 40, name: 'Porta Principal' }] });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=group_access_rules')) {
+        return ok(200, { group_access_rules: [{ group_id: 10, access_rule_id: 1 }] });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=access_rule_time_zones')) {
+        return ok(200, { access_rule_time_zones: [{ access_rule_id: 1, time_zone_id: 30 }] });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=portal_access_rules')) {
+        return ok(200, { portal_access_rules: [{ portal_id: 40, access_rule_id: 1 }] });
+      }
       if (urlString.includes('/modify_objects.fcgi') && method === 'POST') {
         const body = JSON.parse(String(init?.body));
         rulesList = rulesList.map((r) => (r.id === body.where.id ? { ...r, name: body.values.name } : r));
@@ -144,6 +165,9 @@ describe('Access Rules CRUD via .fcgi', () => {
     });
 
     await userEvent.click(screen.getByRole('button', { name: /editar acesso administrativo/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Administradores')).toBeChecked();
+    });
     const nameInput = screen.getByLabelText(/nome/i);
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, 'Acesso Noturno');
@@ -215,6 +239,175 @@ describe('Access Rules CRUD via .fcgi', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Erro interno')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Access Rules association management', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('controlid_session', 'auth-token-999');
+    vi.restoreAllMocks();
+  });
+
+  const rulesList = [{ id: 1, name: 'Acesso Administrativo' }];
+  const groupsList = [
+    { id: 10, name: 'Administradores' },
+    { id: 20, name: 'Visitantes' },
+  ];
+  const timeZonesList = [
+    { id: 30, name: 'Comercial' },
+    { id: 31, name: 'Noturno' },
+  ];
+  const portalsList = [{ id: 40, name: 'Porta Principal' }];
+
+  function mockAssociationFetch(overrides: {
+    groupAccessRules?: { group_id: number; access_rule_id: number }[];
+    accessRuleTimeZones?: { access_rule_id: number; time_zone_id: number }[];
+    portalAccessRules?: { portal_id: number; access_rule_id: number }[];
+    onCreate?: (object: string, values: Record<string, unknown>) => void;
+    onDestroy?: (object: string, where: Record<string, unknown>) => void;
+  }) {
+    const groupAccessRules = overrides.groupAccessRules ?? [{ group_id: 10, access_rule_id: 1 }];
+    const accessRuleTimeZones = overrides.accessRuleTimeZones ?? [{ access_rule_id: 1, time_zone_id: 30 }];
+    const portalAccessRules = overrides.portalAccessRules ?? [{ portal_id: 40, access_rule_id: 1 }];
+
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      const urlString = String(url);
+      const method = init?.method ?? 'GET';
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+
+      if (urlString.includes('/load_objects.fcgi?object=access_rules')) {
+        return ok(200, { access_rules: rulesList });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=groups')) {
+        return ok(200, { groups: groupsList });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=time_zones')) {
+        return ok(200, { time_zones: timeZonesList });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=portals')) {
+        return ok(200, { portals: portalsList });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=group_access_rules')) {
+        return ok(200, { group_access_rules: groupAccessRules });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=access_rule_time_zones')) {
+        return ok(200, { access_rule_time_zones: accessRuleTimeZones });
+      }
+      if (urlString.includes('/load_objects.fcgi?object=portal_access_rules')) {
+        return ok(200, { portal_access_rules: portalAccessRules });
+      }
+      if (urlString.includes('/create_objects.fcgi') && method === 'POST') {
+        overrides.onCreate?.(body.object, body.values[0]);
+        return ok(200, { ids: [999] });
+      }
+      if (urlString.includes('/destroy_objects.fcgi') && method === 'POST') {
+        overrides.onDestroy?.(body.object, body.where);
+        return ok(200, { changes: 1 });
+      }
+      return ok(404, {});
+    });
+  }
+
+  it('pre-checks each checklist with the rule current associations', async () => {
+    mockAssociationFetch({});
+
+    renderAccessRulesPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Acesso Administrativo')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /editar acesso administrativo/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Administradores')).toBeChecked();
+    });
+    expect(screen.getByLabelText('Visitantes')).not.toBeChecked();
+    expect(screen.getByLabelText('Comercial')).toBeChecked();
+    expect(screen.getByLabelText('Porta Principal')).toBeChecked();
+  });
+
+  it('adds a group consuming POST /create_objects.fcgi?object=group_access_rules', async () => {
+    const created: { object: string; values: Record<string, unknown> }[] = [];
+    mockAssociationFetch({ onCreate: (object, values) => created.push({ object, values }) });
+
+    renderAccessRulesPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Acesso Administrativo')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /editar acesso administrativo/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Visitantes')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByLabelText('Visitantes'));
+    await userEvent.click(screen.getByRole('button', { name: /salvar alterações/i }));
+
+    await waitFor(() => {
+      expect(created).toContainEqual({
+        object: 'group_access_rules',
+        values: { group_id: 20, access_rule_id: 1 },
+      });
+    });
+  });
+
+  it('removes a time zone consuming POST /destroy_objects.fcgi?object=access_rule_time_zones', async () => {
+    const destroyed: { object: string; where: Record<string, unknown> }[] = [];
+    // Rule starts associated with BOTH time zones, so unchecking one still
+    // leaves the checklist with >=1 entry checked (required to save).
+    mockAssociationFetch({
+      accessRuleTimeZones: [
+        { access_rule_id: 1, time_zone_id: 30 },
+        { access_rule_id: 1, time_zone_id: 31 },
+      ],
+      onDestroy: (object, where) => destroyed.push({ object, where }),
+    });
+
+    renderAccessRulesPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Acesso Administrativo')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /editar acesso administrativo/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Comercial')).toBeChecked();
+    });
+    expect(screen.getByLabelText('Noturno')).toBeChecked();
+
+    await userEvent.click(screen.getByLabelText('Comercial'));
+    await userEvent.click(screen.getByRole('button', { name: /salvar alterações/i }));
+
+    await waitFor(() => {
+      expect(destroyed).toContainEqual({
+        object: 'access_rule_time_zones',
+        where: { access_rule_id: 1, time_zone_id: 30 },
+      });
+    });
+  });
+
+  it('rejects saving when a checklist has zero entries checked', async () => {
+    mockAssociationFetch({ portalAccessRules: [] });
+
+    renderAccessRulesPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Acesso Administrativo')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /editar acesso administrativo/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Porta Principal')).not.toBeChecked();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /salvar alterações/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Selecione ao menos um portal')).toBeInTheDocument();
     });
   });
 });

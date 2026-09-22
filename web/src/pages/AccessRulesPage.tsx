@@ -18,6 +18,44 @@ const INITIAL_FORM_DATA: AccessRuleFormData = {
   name: '',
 };
 
+interface NamedEntityRow {
+  id: number;
+  name: string;
+}
+
+interface LoadNamedEntityResponse {
+  groups?: NamedEntityRow[];
+  time_zones?: NamedEntityRow[];
+  portals?: NamedEntityRow[];
+}
+
+interface GroupAccessRuleRow {
+  group_id: number;
+  access_rule_id: number;
+}
+
+interface AccessRuleTimeZoneRow {
+  access_rule_id: number;
+  time_zone_id: number;
+}
+
+interface PortalAccessRuleRow {
+  portal_id: number;
+  access_rule_id: number;
+}
+
+interface LoadGroupAccessRulesResponse {
+  group_access_rules?: GroupAccessRuleRow[];
+}
+
+interface LoadAccessRuleTimeZonesResponse {
+  access_rule_time_zones?: AccessRuleTimeZoneRow[];
+}
+
+interface LoadPortalAccessRulesResponse {
+  portal_access_rules?: PortalAccessRuleRow[];
+}
+
 export function AccessRulesPage() {
   const { fcgiFetch } = useFcgi();
 
@@ -32,6 +70,17 @@ export function AccessRulesPage() {
   const [editingAccessRule, setEditingAccessRule] = useState<AccessRuleRow | null>(null);
   const [editFormData, setEditFormData] = useState<AccessRuleFormData>(INITIAL_FORM_DATA);
   const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  const [loadingAssociations, setLoadingAssociations] = useState(false);
+  const [allGroups, setAllGroups] = useState<NamedEntityRow[]>([]);
+  const [allTimeZones, setAllTimeZones] = useState<NamedEntityRow[]>([]);
+  const [allPortals, setAllPortals] = useState<NamedEntityRow[]>([]);
+  const [originalGroupIds, setOriginalGroupIds] = useState<Set<number>>(new Set());
+  const [checkedGroupIds, setCheckedGroupIds] = useState<Set<number>>(new Set());
+  const [originalTimeZoneIds, setOriginalTimeZoneIds] = useState<Set<number>>(new Set());
+  const [checkedTimeZoneIds, setCheckedTimeZoneIds] = useState<Set<number>>(new Set());
+  const [originalPortalIds, setOriginalPortalIds] = useState<Set<number>>(new Set());
+  const [checkedPortalIds, setCheckedPortalIds] = useState<Set<number>>(new Set());
 
   const [deletingAccessRule, setDeletingAccessRule] = useState<AccessRuleRow | null>(null);
   const [submittingDelete, setSubmittingDelete] = useState(false);
@@ -91,10 +140,117 @@ export function AccessRulesPage() {
     }
   };
 
-  const handleOpenEdit = (accessRule: AccessRuleRow) => {
+  const handleOpenEdit = async (accessRule: AccessRuleRow) => {
     setEditingAccessRule(accessRule);
     setEditFormData({ name: accessRule.name });
     setError(null);
+    setLoadingAssociations(true);
+    try {
+      const [groupsData, timeZonesData, portalsData, groupRulesData, timeZoneRulesData, portalRulesData] =
+        await Promise.all([
+          fcgiFetch<LoadNamedEntityResponse>('/load_objects.fcgi?object=groups', {
+            method: 'POST',
+            body: JSON.stringify({ object: 'groups' }),
+          }),
+          fcgiFetch<LoadNamedEntityResponse>('/load_objects.fcgi?object=time_zones', {
+            method: 'POST',
+            body: JSON.stringify({ object: 'time_zones' }),
+          }),
+          fcgiFetch<LoadNamedEntityResponse>('/load_objects.fcgi?object=portals', {
+            method: 'POST',
+            body: JSON.stringify({ object: 'portals' }),
+          }),
+          fcgiFetch<LoadGroupAccessRulesResponse>('/load_objects.fcgi?object=group_access_rules', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'group_access_rules',
+              where: { access_rule_id: accessRule.id },
+            }),
+          }),
+          fcgiFetch<LoadAccessRuleTimeZonesResponse>(
+            '/load_objects.fcgi?object=access_rule_time_zones',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                object: 'access_rule_time_zones',
+                where: { access_rule_id: accessRule.id },
+              }),
+            }
+          ),
+          fcgiFetch<LoadPortalAccessRulesResponse>('/load_objects.fcgi?object=portal_access_rules', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'portal_access_rules',
+              where: { access_rule_id: accessRule.id },
+            }),
+          }),
+        ]);
+
+      setAllGroups(groupsData.groups || []);
+      setAllTimeZones(timeZonesData.time_zones || []);
+      setAllPortals(portalsData.portals || []);
+
+      const groupIds = new Set((groupRulesData.group_access_rules || []).map((row) => row.group_id));
+      setOriginalGroupIds(groupIds);
+      setCheckedGroupIds(new Set(groupIds));
+
+      const timeZoneIds = new Set(
+        (timeZoneRulesData.access_rule_time_zones || []).map((row) => row.time_zone_id)
+      );
+      setOriginalTimeZoneIds(timeZoneIds);
+      setCheckedTimeZoneIds(new Set(timeZoneIds));
+
+      const portalIds = new Set(
+        (portalRulesData.portal_access_rules || []).map((row) => row.portal_id)
+      );
+      setOriginalPortalIds(portalIds);
+      setCheckedPortalIds(new Set(portalIds));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar associações da regra de acesso');
+    } finally {
+      setLoadingAssociations(false);
+    }
+  };
+
+  const closeEditModal = () => {
+    setEditingAccessRule(null);
+    setEditFormData(INITIAL_FORM_DATA);
+    setAllGroups([]);
+    setAllTimeZones([]);
+    setAllPortals([]);
+    setOriginalGroupIds(new Set());
+    setCheckedGroupIds(new Set());
+    setOriginalTimeZoneIds(new Set());
+    setCheckedTimeZoneIds(new Set());
+    setOriginalPortalIds(new Set());
+    setCheckedPortalIds(new Set());
+  };
+
+  const toggleGroup = (id: number) => {
+    setCheckedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleTimeZone = (id: number) => {
+    setCheckedTimeZoneIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const togglePortal = (id: number) => {
+    setCheckedPortalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleEditAccessRule = async (e: React.FormEvent) => {
@@ -104,6 +260,19 @@ export function AccessRulesPage() {
       setError('O nome da regra de acesso é obrigatório');
       return;
     }
+    if (checkedGroupIds.size === 0) {
+      setError('Selecione ao menos um grupo');
+      return;
+    }
+    if (checkedTimeZoneIds.size === 0) {
+      setError('Selecione ao menos um horário');
+      return;
+    }
+    if (checkedPortalIds.size === 0) {
+      setError('Selecione ao menos um portal');
+      return;
+    }
+
     try {
       setSubmittingEdit(true);
       setError(null);
@@ -119,8 +288,73 @@ export function AccessRulesPage() {
         });
       }
 
-      setEditingAccessRule(null);
-      setEditFormData(INITIAL_FORM_DATA);
+      const ruleId = editingAccessRule.id;
+
+      const groupsToAdd = [...checkedGroupIds].filter((id) => !originalGroupIds.has(id));
+      const groupsToRemove = [...originalGroupIds].filter((id) => !checkedGroupIds.has(id));
+      const timeZonesToAdd = [...checkedTimeZoneIds].filter((id) => !originalTimeZoneIds.has(id));
+      const timeZonesToRemove = [...originalTimeZoneIds].filter((id) => !checkedTimeZoneIds.has(id));
+      const portalsToAdd = [...checkedPortalIds].filter((id) => !originalPortalIds.has(id));
+      const portalsToRemove = [...originalPortalIds].filter((id) => !checkedPortalIds.has(id));
+
+      await Promise.all([
+        ...groupsToAdd.map((groupId) =>
+          fcgiFetch('/create_objects.fcgi?object=group_access_rules', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'group_access_rules',
+              values: [{ group_id: groupId, access_rule_id: ruleId }],
+            }),
+          })
+        ),
+        ...groupsToRemove.map((groupId) =>
+          fcgiFetch('/destroy_objects.fcgi?object=group_access_rules', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'group_access_rules',
+              where: { group_id: groupId, access_rule_id: ruleId },
+            }),
+          })
+        ),
+        ...timeZonesToAdd.map((timeZoneId) =>
+          fcgiFetch('/create_objects.fcgi?object=access_rule_time_zones', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'access_rule_time_zones',
+              values: [{ access_rule_id: ruleId, time_zone_id: timeZoneId }],
+            }),
+          })
+        ),
+        ...timeZonesToRemove.map((timeZoneId) =>
+          fcgiFetch('/destroy_objects.fcgi?object=access_rule_time_zones', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'access_rule_time_zones',
+              where: { access_rule_id: ruleId, time_zone_id: timeZoneId },
+            }),
+          })
+        ),
+        ...portalsToAdd.map((portalId) =>
+          fcgiFetch('/create_objects.fcgi?object=portal_access_rules', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'portal_access_rules',
+              values: [{ portal_id: portalId, access_rule_id: ruleId }],
+            }),
+          })
+        ),
+        ...portalsToRemove.map((portalId) =>
+          fcgiFetch('/destroy_objects.fcgi?object=portal_access_rules', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'portal_access_rules',
+              where: { portal_id: portalId, access_rule_id: ruleId },
+            }),
+          })
+        ),
+      ]);
+
+      closeEditModal();
       await loadAccessRules();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar regra de acesso');
@@ -280,13 +514,10 @@ export function AccessRulesPage() {
       {/* Modal edit access rule */}
       {editingAccessRule && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white">Editar Regra de Acesso</h3>
-              <button
-                onClick={() => setEditingAccessRule(null)}
-                className="text-slate-400 hover:text-white text-sm"
-              >
+              <button onClick={closeEditModal} className="text-slate-400 hover:text-white text-sm">
                 ✕
               </button>
             </div>
@@ -310,10 +541,94 @@ export function AccessRulesPage() {
                 />
               </div>
 
+              {loadingAssociations ? (
+                <p className="text-xs text-slate-400 p-2">Carregando associações...</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+                      Grupos
+                    </span>
+                    {allGroups.length === 0 ? (
+                      <p className="text-xs text-slate-400 p-2">Nenhum grupo cadastrado.</p>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 p-2 space-y-1">
+                        {allGroups.map((group) => (
+                          <label
+                            key={group.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-700/50 text-sm text-slate-200 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checkedGroupIds.has(group.id)}
+                              onChange={() => toggleGroup(group.id)}
+                              className="rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                            />
+                            {group.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+                      Horários
+                    </span>
+                    {allTimeZones.length === 0 ? (
+                      <p className="text-xs text-slate-400 p-2">Nenhum horário cadastrado.</p>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 p-2 space-y-1">
+                        {allTimeZones.map((timeZone) => (
+                          <label
+                            key={timeZone.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-700/50 text-sm text-slate-200 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checkedTimeZoneIds.has(timeZone.id)}
+                              onChange={() => toggleTimeZone(timeZone.id)}
+                              className="rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                            />
+                            {timeZone.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+                      Portais
+                    </span>
+                    {allPortals.length === 0 ? (
+                      <p className="text-xs text-slate-400 p-2">Nenhum portal cadastrado.</p>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 p-2 space-y-1">
+                        {allPortals.map((portal) => (
+                          <label
+                            key={portal.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-700/50 text-sm text-slate-200 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checkedPortalIds.has(portal.id)}
+                              onChange={() => togglePortal(portal.id)}
+                              className="rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                            />
+                            {portal.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setEditingAccessRule(null)}
+                  onClick={closeEditModal}
                   className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
                 >
                   Cancelar
