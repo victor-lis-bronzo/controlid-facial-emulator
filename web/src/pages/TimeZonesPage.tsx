@@ -17,6 +17,15 @@ interface LoadTimeZonesResponse {
 interface TimeSpanRow {
   id: number;
   time_zone_id: number;
+  start: string;
+  end: string;
+  sun: string;
+  mon: string;
+  tue: string;
+  wed: string;
+  thu: string;
+  fri: string;
+  sat: string;
 }
 
 interface LoadTimeSpansResponse {
@@ -30,6 +39,93 @@ interface TimeZoneFormData {
 const INITIAL_FORM_DATA: TimeZoneFormData = {
   name: '',
 };
+
+const WEEKDAYS = [
+  { key: 'sun', label: 'Dom' },
+  { key: 'mon', label: 'Seg' },
+  { key: 'tue', label: 'Ter' },
+  { key: 'wed', label: 'Qua' },
+  { key: 'thu', label: 'Qui' },
+  { key: 'fri', label: 'Sex' },
+  { key: 'sat', label: 'Sáb' },
+] as const;
+
+type WeekdayKey = (typeof WEEKDAYS)[number]['key'];
+
+interface IntervalRow {
+  key: string;
+  id?: number;
+  start: string; // HH:MM
+  end: string; // HH:MM
+  sun: boolean;
+  mon: boolean;
+  tue: boolean;
+  wed: boolean;
+  thu: boolean;
+  fri: boolean;
+  sat: boolean;
+}
+
+function secondsToHHMM(secondsValue: string): string {
+  const totalSeconds = Number(secondsValue) || 0;
+  // `<input type="time">` only accepts 00:00–23:59; the device's documented
+  // end-of-day sentinel (86400) has no valid HH:MM representation, so it is
+  // clamped to the last displayable minute instead of rendering "24:00".
+  if (totalSeconds >= 86400) return '23:59';
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function hhmmToSeconds(hhmm: string): number {
+  const [hours, minutes] = hhmm.split(':').map((part) => Number(part) || 0);
+  return hours * 3600 + minutes * 60;
+}
+
+function spanToIntervalRow(span: TimeSpanRow): IntervalRow {
+  return {
+    key: `existing-${span.id}`,
+    id: span.id,
+    start: secondsToHHMM(span.start),
+    end: secondsToHHMM(span.end),
+    sun: span.sun === '1',
+    mon: span.mon === '1',
+    tue: span.tue === '1',
+    wed: span.wed === '1',
+    thu: span.thu === '1',
+    fri: span.fri === '1',
+    sat: span.sat === '1',
+  };
+}
+
+function intervalRowsEqual(a: IntervalRow, b: IntervalRow): boolean {
+  return (
+    a.start === b.start &&
+    a.end === b.end &&
+    a.sun === b.sun &&
+    a.mon === b.mon &&
+    a.tue === b.tue &&
+    a.wed === b.wed &&
+    a.thu === b.thu &&
+    a.fri === b.fri &&
+    a.sat === b.sat
+  );
+}
+
+function newInterval(key: string): IntervalRow {
+  return {
+    key,
+    start: '00:00',
+    end: '00:00',
+    sun: false,
+    mon: false,
+    tue: false,
+    wed: false,
+    thu: false,
+    fri: false,
+    sat: false,
+  };
+}
 
 export function TimeZonesPage() {
   const { fcgiFetch } = useFcgi();
@@ -45,6 +141,13 @@ export function TimeZonesPage() {
   const [editingTimeZone, setEditingTimeZone] = useState<TimeZoneItem | null>(null);
   const [editFormData, setEditFormData] = useState<TimeZoneFormData>(INITIAL_FORM_DATA);
   const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  const [intervalRows, setIntervalRows] = useState<IntervalRow[]>([]);
+  const [originalIntervalsById, setOriginalIntervalsById] = useState<Map<number, IntervalRow>>(
+    new Map()
+  );
+  const [loadingIntervals, setLoadingIntervals] = useState(false);
+  const nextNewIntervalId = React.useRef(0);
 
   const [deletingTimeZone, setDeletingTimeZone] = useState<TimeZoneItem | null>(null);
   const [submittingDelete, setSubmittingDelete] = useState(false);
@@ -118,10 +221,53 @@ export function TimeZonesPage() {
     }
   };
 
-  const handleOpenEdit = (timeZone: TimeZoneItem) => {
+  const handleOpenEdit = async (timeZone: TimeZoneItem) => {
     setEditingTimeZone(timeZone);
     setEditFormData({ name: timeZone.name });
     setError(null);
+    setLoadingIntervals(true);
+    try {
+      const spansData = await fcgiFetch<LoadTimeSpansResponse>(
+        '/load_objects.fcgi?object=time_spans',
+        {
+          method: 'POST',
+          body: JSON.stringify({ object: 'time_spans', where: { time_zone_id: timeZone.id } }),
+        }
+      );
+      const rows = (spansData.time_spans || []).map(spanToIntervalRow);
+      setIntervalRows(rows);
+      setOriginalIntervalsById(new Map(rows.map((row) => [row.id as number, row])));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar intervalos do horário');
+    } finally {
+      setLoadingIntervals(false);
+    }
+  };
+
+  const closeEditModal = () => {
+    setEditingTimeZone(null);
+    setEditFormData(INITIAL_FORM_DATA);
+    setIntervalRows([]);
+    setOriginalIntervalsById(new Map());
+  };
+
+  const handleAddInterval = () => {
+    const key = `new-${nextNewIntervalId.current++}`;
+    setIntervalRows((prev) => [...prev, newInterval(key)]);
+  };
+
+  const handleRemoveInterval = (key: string) => {
+    setIntervalRows((prev) => prev.filter((row) => row.key !== key));
+  };
+
+  const handleToggleIntervalDay = (key: string, day: WeekdayKey) => {
+    setIntervalRows((prev) =>
+      prev.map((row) => (row.key === key ? { ...row, [day]: !row[day] } : row))
+    );
+  };
+
+  const handleIntervalTimeChange = (key: string, field: 'start' | 'end', value: string) => {
+    setIntervalRows((prev) => prev.map((row) => (row.key === key ? { ...row, [field]: value } : row)));
   };
 
   const handleEditTimeZone = async (e: React.FormEvent) => {
@@ -131,6 +277,19 @@ export function TimeZonesPage() {
       setError('O nome do horário é obrigatório');
       return;
     }
+
+    for (const row of intervalRows) {
+      const hasDay = row.sun || row.mon || row.tue || row.wed || row.thu || row.fri || row.sat;
+      if (!hasDay) {
+        setError('Cada intervalo precisa de ao menos um dia da semana marcado');
+        return;
+      }
+      if (hhmmToSeconds(row.start) >= hhmmToSeconds(row.end)) {
+        setError('O horário de início deve ser anterior ao horário de término');
+        return;
+      }
+    }
+
     try {
       setSubmittingEdit(true);
       setError(null);
@@ -146,8 +305,63 @@ export function TimeZonesPage() {
         });
       }
 
-      setEditingTimeZone(null);
-      setEditFormData(INITIAL_FORM_DATA);
+      const currentIds = new Set(
+        intervalRows.filter((row) => row.id !== undefined).map((row) => row.id as number)
+      );
+      const idsToDestroy: number[] = [];
+      for (const id of originalIntervalsById.keys()) {
+        if (!currentIds.has(id)) idsToDestroy.push(id);
+      }
+
+      const rowsToCreate: IntervalRow[] = [];
+      for (const row of intervalRows) {
+        if (row.id === undefined) {
+          rowsToCreate.push(row);
+          continue;
+        }
+        const original = originalIntervalsById.get(row.id);
+        if (original && !intervalRowsEqual(original, row)) {
+          idsToDestroy.push(row.id);
+          rowsToCreate.push(row);
+        }
+      }
+
+      const timeZoneId = editingTimeZone.id;
+      await Promise.all([
+        ...idsToDestroy.map((id) =>
+          fcgiFetch('/destroy_objects.fcgi?object=time_spans', {
+            method: 'POST',
+            body: JSON.stringify({ object: 'time_spans', where: { id } }),
+          })
+        ),
+        ...rowsToCreate.map((row) =>
+          fcgiFetch('/create_objects.fcgi?object=time_spans', {
+            method: 'POST',
+            body: JSON.stringify({
+              object: 'time_spans',
+              values: [
+                {
+                  time_zone_id: String(timeZoneId),
+                  start: String(hhmmToSeconds(row.start)),
+                  end: String(hhmmToSeconds(row.end)),
+                  sun: row.sun ? '1' : '0',
+                  mon: row.mon ? '1' : '0',
+                  tue: row.tue ? '1' : '0',
+                  wed: row.wed ? '1' : '0',
+                  thu: row.thu ? '1' : '0',
+                  fri: row.fri ? '1' : '0',
+                  sat: row.sat ? '1' : '0',
+                  hol1: '0',
+                  hol2: '0',
+                  hol3: '0',
+                },
+              ],
+            }),
+          })
+        ),
+      ]);
+
+      closeEditModal();
       await loadTimeZones();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar horário');
@@ -315,7 +529,7 @@ export function TimeZonesPage() {
             <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white">Editar Horário</h3>
               <button
-                onClick={() => setEditingTimeZone(null)}
+                onClick={closeEditModal}
                 className="text-slate-400 hover:text-white text-sm"
               >
                 ✕
@@ -341,10 +555,91 @@ export function TimeZonesPage() {
                 />
               </div>
 
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    Intervalos
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddInterval}
+                    className="text-xs font-semibold text-sky-400 hover:text-sky-300"
+                  >
+                    + Adicionar intervalo
+                  </button>
+                </div>
+                {loadingIntervals ? (
+                  <p className="text-xs text-slate-400 p-2">Carregando intervalos...</p>
+                ) : intervalRows.length === 0 ? (
+                  <p className="text-xs text-slate-400 p-2">Nenhum intervalo cadastrado.</p>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 p-3 space-y-3">
+                    {intervalRows.map((row) => (
+                      <div
+                        key={row.key}
+                        className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2"
+                      >
+                        <div className="flex flex-wrap gap-2">
+                          {WEEKDAYS.map((day) => (
+                            <label
+                              key={day.key}
+                              className="flex items-center gap-1 text-xs text-slate-200 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                aria-label={day.label}
+                                checked={row[day.key]}
+                                onChange={() => handleToggleIntervalDay(row.key, day.key)}
+                                className="rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                              />
+                              {day.label}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-slate-400">
+                            Início
+                            <input
+                              type="time"
+                              aria-label={`Início do intervalo ${row.key}`}
+                              value={row.start}
+                              onChange={(e) =>
+                                handleIntervalTimeChange(row.key, 'start', e.target.value)
+                              }
+                              className="ml-1 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-white"
+                            />
+                          </label>
+                          <label className="text-xs text-slate-400">
+                            Término
+                            <input
+                              type="time"
+                              aria-label={`Término do intervalo ${row.key}`}
+                              value={row.end}
+                              onChange={(e) =>
+                                handleIntervalTimeChange(row.key, 'end', e.target.value)
+                              }
+                              className="ml-1 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-white"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveInterval(row.key)}
+                            aria-label={`Remover intervalo ${row.key}`}
+                            className="ml-auto text-xs font-semibold text-rose-400 hover:text-rose-300"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setEditingTimeZone(null)}
+                  onClick={closeEditModal}
                   className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
                 >
                   Cancelar
