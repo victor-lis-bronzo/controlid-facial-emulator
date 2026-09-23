@@ -139,3 +139,65 @@ describe('Dashboard count cards', () => {
     });
   });
 });
+
+describe('Dashboard recent activity list', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('controlid_session', 'auth-token-999');
+    vi.restoreAllMocks();
+  });
+
+  it('shows the explicit empty state when there are no access logs', async () => {
+    mockDashboardFetch({ access_logs: [] });
+
+    renderDashboardPage();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Nenhum log de acesso registrado no momento.')
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('renders at most the 10 most recent logs, sorted by id descending, with translated event labels', async () => {
+    const logs = Array.from({ length: 15 }, (_, i) => ({
+      id: i + 1,
+      time: String(1_700_000_000 + i),
+      event: i % 3 === 0 ? '7' : i % 3 === 1 ? '6' : '3',
+      user_id: String(100 + i),
+      portal_id: String(200 + i),
+    }));
+    mockDashboardFetch({ access_logs: logs });
+
+    renderDashboardPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Atividade Recente')).toBeInTheDocument();
+    });
+
+    // Highest id (15) must be present; the 5 oldest (ids 1-5) must be truncated away.
+    expect(screen.getByText('214')).toBeInTheDocument(); // portal_id for log id 15
+    expect(screen.queryByText('200')).not.toBeInTheDocument(); // portal_id for log id 1
+
+    const rows = screen.getAllByRole('row').slice(1); // drop header row
+    expect(rows).toHaveLength(10);
+
+    expect(screen.getAllByText('Autorizado').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Negado').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Não identificado').length).toBeGreaterThan(0);
+  });
+
+  it('falls back to the raw event code for an unrecognized value', async () => {
+    mockDashboardFetch({
+      access_logs: [
+        { id: 1, time: '1700000000', event: '99', user_id: '1', portal_id: '1' },
+      ],
+    });
+
+    renderDashboardPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('99')).toBeInTheDocument();
+    });
+  });
+});

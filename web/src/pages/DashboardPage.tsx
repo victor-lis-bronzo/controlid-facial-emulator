@@ -11,6 +11,26 @@ interface DashboardCounts {
   accessLogsTotal: number;
 }
 
+interface AccessLogRow {
+  id: number;
+  time: string;
+  event: string;
+  user_id: string;
+  portal_id: string;
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  '7': 'Autorizado',
+  '6': 'Negado',
+  '3': 'Não identificado',
+};
+
+function formatLogTime(epochSeconds: string): string {
+  const millis = Number(epochSeconds) * 1000;
+  if (!Number.isFinite(millis)) return epochSeconds;
+  return new Date(millis).toLocaleString('pt-BR');
+}
+
 interface CountCardDef {
   key: keyof Omit<DashboardCounts, 'accessLogsTotal'>;
   label: string;
@@ -30,6 +50,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
 
   const [counts, setCounts] = useState<DashboardCounts | null>(null);
+  const [recentLogs, setRecentLogs] = useState<AccessLogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,20 +81,22 @@ export function DashboardPage() {
             method: 'POST',
             body: JSON.stringify({ object: 'access_rules' }),
           }),
-          fcgiFetch<{ access_logs?: unknown[] }>('/load_objects.fcgi?object=access_logs', {
+          fcgiFetch<{ access_logs?: AccessLogRow[] }>('/load_objects.fcgi?object=access_logs', {
             method: 'POST',
             body: JSON.stringify({ object: 'access_logs' }),
           }),
         ]);
 
+      const accessLogs = accessLogsData.access_logs || [];
       setCounts({
         users: (usersData.users || []).length,
         groups: (groupsData.groups || []).length,
         timeZones: (timeZonesData.time_zones || []).length,
         portals: (portalsData.portals || []).length,
         accessRules: (accessRulesData.access_rules || []).length,
-        accessLogsTotal: (accessLogsData.access_logs || []).length,
+        accessLogsTotal: accessLogs.length,
       });
+      setRecentLogs([...accessLogs].sort((a, b) => b.id - a.id).slice(0, 10));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar o dashboard');
     } finally {
@@ -123,6 +146,46 @@ export function DashboardPage() {
               Logs de Acesso
             </div>
             <div className="mt-1 text-2xl font-bold text-white">{counts?.accessLogsTotal ?? 0}</div>
+          </div>
+        </div>
+      )}
+
+      {!loading && (
+        <div className="mt-8">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">
+            Atividade Recente
+          </h3>
+          <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden shadow-sm">
+            {recentLogs.length === 0 ? (
+              <div className="p-8 text-center text-sm text-slate-400">
+                Nenhum log de acesso registrado no momento.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-slate-800 bg-slate-900/50 text-xs uppercase tracking-wider text-slate-400">
+                    <tr>
+                      <th className="px-6 py-3.5 font-semibold">Quando</th>
+                      <th className="px-6 py-3.5 font-semibold">Evento</th>
+                      <th className="px-6 py-3.5 font-semibold">Usuário</th>
+                      <th className="px-6 py-3.5 font-semibold">Portal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {recentLogs.map((log) => (
+                      <tr key={log.id}>
+                        <td className="px-6 py-4 text-slate-300">{formatLogTime(log.time)}</td>
+                        <td className="px-6 py-4 text-white">
+                          {EVENT_LABELS[log.event] ?? log.event}
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs text-slate-400">{log.user_id}</td>
+                        <td className="px-6 py-4 font-mono text-xs text-slate-400">{log.portal_id}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
