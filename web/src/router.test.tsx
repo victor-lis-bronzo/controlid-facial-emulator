@@ -45,7 +45,7 @@ describe('AppRouter (WebGUI Foundation)', () => {
     });
   });
 
-  it('redirects /admin to /admin/users when authenticated', async () => {
+  it('redirects /admin to /admin/dashboard when authenticated', async () => {
     localStorage.setItem('controlid_session', 'test-session');
     render(
       <AuthProvider>
@@ -54,6 +54,6 @@ describe('AppRouter (WebGUI Foundation)', () => {
         </MemoryRouter>
       </AuthProvider>
     );
-    expect(await screen.findByRole('heading', { name: /users/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
   });
 });

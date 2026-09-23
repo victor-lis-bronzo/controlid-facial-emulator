@@ -40,6 +40,10 @@ describe('WebGuiLayout (Issue #23)', () => {
       </AuthProvider>
     );
 
+    const dashboardLink = screen.getByRole('link', { name: /início/i });
+    expect(dashboardLink).toBeInTheDocument();
+    expect(dashboardLink).toHaveAttribute('href', '/admin/dashboard');
+
     const usersLink = screen.getByRole('link', { name: /usuários/i });
     expect(usersLink).toBeInTheDocument();
     expect(usersLink).toHaveAttribute('href', '/admin/users');

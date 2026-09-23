@@ -13,6 +13,7 @@ interface NavModule {
 }
 
 const NAV_MODULES: NavModule[] = [
+  { name: 'Início', path: '/admin/dashboard', enabled: true },
   { name: 'Usuários', path: '/admin/users', enabled: true },
   { name: 'Grupos', path: '/admin/groups', enabled: true },
   { name: 'Horários', path: '/admin/time-zones', enabled: true },

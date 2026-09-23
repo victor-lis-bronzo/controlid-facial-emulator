@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage.tsx';
+import { DashboardPage } from './pages/DashboardPage.tsx';
 import { UsersPage } from './pages/UsersPage.tsx';
 import { GroupsPage } from './pages/GroupsPage.tsx';
 import { TimeZonesPage } from './pages/TimeZonesPage.tsx';
@@ -11,13 +12,23 @@ import { useAuth } from './context/AuthContext.tsx';
 
 function RootRedirect() {
   const { isAuthenticated } = useAuth();
-  return <Navigate to={isAuthenticated ? '/admin/users' : '/admin/login'} replace />;
+  return <Navigate to={isAuthenticated ? '/admin/dashboard' : '/admin/login'} replace />;
 }
 
 export function AppRouter() {
   return (
     <Routes>
       <Route path="/admin/login" element={<LoginPage />} />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute>
+            <WebGuiLayout>
+              <DashboardPage />
+            </WebGuiLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/users"
         element={
