@@ -17,8 +17,12 @@ A moldura estrutural web embarcada (header e sidebar) servida pela leitora para 
 _Avoid_: AppShell, MasterLayout, AdminTemplate
 
 **Admin Management Panel**:
-A implementação anterior da interface administrativa web, construída sobre uma API REST própria (`/api/admin/*`) com hash router, entregue pela spec `.kiro/specs/admin-management-panel`. Seu código ainda existe no repositório (`App.tsx`, `sections/`), mas não está montado pela aplicação em execução (`main.tsx`/`AppRouter.tsx`) — é código órfão até que seu destino seja decidido. Distinta da WebGUI (a reescrita atual, fiel ao dispositivo físico, consumindo exclusivamente `.fcgi`).
+A implementação anterior da interface administrativa web, construída sobre uma API REST própria (`/api/admin/*`) com hash router, entregue pela spec `.kiro/specs/admin-management-panel`. Seu frontend (`App.tsx`, `sections/`) foi removido do repositório por ser código órfão, não montado pela aplicação em execução; o backend REST (`/api/admin/*`) permanece registrado mas sem nenhum chamador. Distinta da WebGUI (a reescrita atual, fiel ao dispositivo físico, consumindo exclusivamente `.fcgi`).
 _Avoid_: Painel Admin (ver WebGUI/_Avoid_ — essa frase hoje só deve se referir a este conceito, nunca à WebGUI), Old Panel, Legacy Panel, REST Panel
+
+**Debug Console**:
+Uma página separada da WebGUI, autenticada pela mesma sessão, que expõe Simulate (disparo de eventos de acesso simulados via `/api/simulate/*`) e Interception Log (tail ao vivo de requisições/webhooks via `/api/interception`) — ferramentas de depuração para integradores sem equivalente na leitora física, por isso deliberadamente fora do invariante de fidelidade da WebGUI.
+_Avoid_: Control Panel, Admin Panel, Simulate Page
 
 **User_Photo**:
 A fotografia biométrica facial associada a um User, persistida no armazenamento de arquivos da leitora e servida/manipulada exclusivamente através dos endpoints .fcgi.
