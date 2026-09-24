@@ -6,6 +6,7 @@ import { GroupsPage } from './pages/GroupsPage.tsx';
 import { TimeZonesPage } from './pages/TimeZonesPage.tsx';
 import { PortalsPage } from './pages/PortalsPage.tsx';
 import { AccessRulesPage } from './pages/AccessRulesPage.tsx';
+import { DebugConsolePage } from './pages/DebugConsolePage.tsx';
 import { ProtectedRoute } from './components/ProtectedRoute.tsx';
 import { WebGuiLayout } from './components/WebGuiLayout.tsx';
 import { useAuth } from './context/AuthContext.tsx';
@@ -76,6 +77,14 @@ export function AppRouter() {
             <WebGuiLayout>
               <AccessRulesPage />
             </WebGuiLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/debug"
+        element={
+          <ProtectedRoute>
+            <DebugConsolePage />
           </ProtectedRoute>
         }
       />

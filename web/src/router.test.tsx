@@ -56,4 +56,29 @@ describe('AppRouter (WebGUI Foundation)', () => {
     );
     expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
   });
+
+  it('redirects /debug to /admin/login when unauthenticated', async () => {
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/debug']}>
+          <AppRouter />
+        </MemoryRouter>
+      </AuthProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /login/i })).toBeInTheDocument();
+    });
+  });
+
+  it('renders the Debug Console on /debug when authenticated', async () => {
+    localStorage.setItem('controlid_session', 'test-session');
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/debug']}>
+          <AppRouter />
+        </MemoryRouter>
+      </AuthProvider>
+    );
+    expect(await screen.findByRole('heading', { name: /debug console/i })).toBeInTheDocument();
+  });
 });
